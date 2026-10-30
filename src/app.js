@@ -36,7 +36,7 @@ const modes = [
  {id:'choice', name:'Tarjimani top', subtitle:'4 ta variantdan to‘g‘risini tanla', description:'Bilimingni tez sinovdan o‘tkaz', color:'blue', icon:'target', badge:'Mini-test'},
  {id:'write', name:'Yozib top', subtitle:'O‘zbekchasidan inglizchasini yoz', description:'So‘zni faol xotiradan chiqar', color:'peach', icon:'pen', badge:'Yozma mashq'},
  {id:'listen', name:'Tinglab yoz', subtitle:'Talaffuzini tingla va so‘zni yoz', description:'Eshitish va imloni birga o‘rgan', color:'mint', icon:'headphones', badge:'Talaffuz mashqi'},
- {id:'mix', name:'Aqlli aralash mashq', subtitle:'4 mashq navbatma-navbat', description:'Bitta so‘zni turli usullarda mustahkamlang', color:'violet', icon:'sparkle', badge:'Tavsiya etiladi'}
+ {id:'mix', name:'Aqlli aralash mashq', subtitle:'3 mashq navbatma-navbat', description:'Bitta so‘zni turli usullarda mustahkamlang', color:'violet', icon:'sparkle', badge:'Tavsiya etiladi'}
 ];
 let state = {
  user:null, authMode:'register',
@@ -51,12 +51,37 @@ let state = {
 };
 
 const { api, client, configError, profile } = window.WordoraBackend;
-let autoNextTimer=null;
-function cancelAutoNext(){if(autoNextTimer!==null){clearTimeout(autoNextTimer);autoNextTimer=null;}}
-function questionMode(){return state.studyMode==='mix'?['choice','write','listen','cards'][state.index%4]:state.studyMode;}
-function focusAnswer(){if(state.page!=='practice'||state.answered||state.sessionFinished)return;if(['write','listen'].includes(questionMode()))requestAnimationFrame(()=>document.getElementById('answer-input')?.focus({preventScroll:true}));}
-function scheduleAutoNext(){cancelAutoNext();if(!state.autoNext||!state.answered||!state.answerCorrect||state.saving)return;const idx=state.index;autoNextTimer=setTimeout(()=>{autoNextTimer=null;if(state.page==='practice'&&state.index===idx&&state.answered&&!state.saving)saveAndAdvance(state.quality);},1900);}
-function selectChoice(i){if(state.answered||state.page!=='practice'||questionMode()!=='choice'||!Number.isInteger(i)||i<0||i>=state.options.length)return;state.chosenIndex=i;const word=state.session[state.index];state.answerCorrect=normalize(state.options[i])===normalize(word.uz);state.quality=state.answerCorrect?4:1;state.answered=true;render();scheduleAutoNext();}
+let autoNextTimer = null;
+function cancelAutoNext(){ if(autoNextTimer!==null){clearTimeout(autoNextTimer);autoNextTimer=null;} }
+function questionMode(){return state.studyMode==='mix' ? ['choice','write','listen'][state.index%3] : state.studyMode;}
+function focusAnswer(){
+ if(state.page!=='practice'||state.answered||state.sessionFinished)return;
+ if(['write','listen'].includes(questionMode())){
+   requestAnimationFrame(()=>document.getElementById('answer-input')?.focus({preventScroll:true}));
+ }
+}
+function positionPractice(){
+ requestAnimationFrame(()=>document.querySelector('.practice-shell')?.scrollIntoView({block:'start',behavior:'instant'}));
+}
+function scheduleAutoNext(){
+ cancelAutoNext();
+ if(!state.autoNext || !state.answered || !state.answerCorrect || state.saving)return;
+ const questionIndex=state.index;
+ autoNextTimer=setTimeout(()=>{
+   autoNextTimer=null;
+   if(state.page==='practice'&&state.index===questionIndex&&state.answered&&!state.saving)saveAndAdvance(state.quality);
+ },1900);
+}
+function selectChoice(i){
+ if(state.answered||state.page!=='practice'||questionMode()!=='choice')return;
+ if(!Number.isInteger(i)||i<0||i>=state.options.length)return;
+ state.chosenIndex=i;
+ const word=state.session[state.index];
+ state.answerCorrect=normalize(state.options[i])===normalize(word.uz);
+ state.quality=state.answerCorrect?4:1;
+ state.answered=true;
+ render();scheduleAutoNext();
+}
 
 function toast(message,type='error'){
   state.alert={message,type};
@@ -199,13 +224,12 @@ function practicePage(){if(state.sessionFinished||!state.session.length)return f
  <div class="progress-track" role="progressbar" aria-label="Mashg‘ulot davomiyligi" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${state.index}"><div style="width:${p(state.index,n)}%"></div></div>
  <div class="quiz-card" aria-live="polite">${content}</div>
  <div class="practice-actionbar"><div class="practice-action-summary"><strong>${state.answered?(state.answerCorrect?'✓ To‘g‘ri javob':'✦ Xatolar orqali o‘rganamiz'):mode==='cards'?'Avval o‘zingiz eslab ko‘ring':'Tayyor bo‘lgach javob bering'}</strong><span>${state.sessionCorrect+(state.answered&&state.answerCorrect?1:0)} ta to‘g‘ri · ${state.sessionWrong+(state.answered&&!state.answerCorrect?1:0)} ta qayta ko‘rish · <kbd>Enter</kbd> davom</span></div>
- <div class="practice-actions">${mode==='cards'?(state.revealed?`<div class="rate-buttons"><button class="btn-rate forgot" data-action="rate" data-quality="1">${I('close',17)} Esimda yo‘q</button><button class="btn-rate hard" data-action="rate" data-quality="3">${I('rotate',17)} Qiyin</button><button class="btn-rate knew" data-action="rate" data-quality="5">${I('check',17)} Bilaman!</button></div>`:`<button class="btn btn-primary" data-action="flip">Javobni ko‘rsatish ${I('eye',18)}</button>`):state.answered?`<button class="btn btn-primary next-button" data-action="next" ${state.saving?'disabled':''}>${state.index===n-1?'Natijani ko‘rish':'Keyingi so‘z'} ${I('arrow',19)}</button>`:`<button class="btn btn-secondary btn-skip" data-action="skip">Bilmayman, o‘tkazish ${I('arrow',17)}</button>`}</div>
+ <div class="practice-actions">${mode==='cards' ? (state.revealed?`<div class="rate-buttons"><button class="btn-rate forgot" data-action="rate" data-quality="1">${I('close',17)} Esimda yo‘q</button><button class="btn-rate hard" data-action="rate" data-quality="3">${I('rotate',17)} Qiyin</button><button class="btn-rate knew" data-action="rate" data-quality="5">${I('check',17)} Bilaman!</button></div>`:`<button class="btn btn-primary" data-action="flip">Javobni ko‘rsatish ${I('eye',18)}</button>`):state.answered?`<button class="btn btn-primary next-button" data-action="next" ${state.saving?'disabled':''}>${state.index===n-1?'Natijani ko‘rish':'Keyingi so‘z'} ${I('arrow',19)}</button>`:`<button class="btn btn-secondary btn-skip" data-action="skip">Bilmayman, o‘tkazish ${I('arrow',17)}</button>`}</div>
  </div><div class="practice-footer"><label class="auto-next-control"><input type="checkbox" id="auto-next-toggle" ${state.autoNext?'checked':''}><span>To‘g‘ri javobdan keyin avtomatik davom etish</span></label><span>${I('sparkle',17)} Qiyin so‘zlar keyin qayta takrorlanadi.</span></div></div>`;
 }
 function typeAnswerForm(w){return `<form id="typing-form" class="typing-form"><label for="answer-input">Sizning javobingiz</label><div class="answer-input-group"><input id="answer-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Inglizcha so‘zni yozing..." ${state.answered?'disabled':''} value="${esc(state.answerValue)}"><button class="btn btn-primary" type="submit" ${state.answered?'disabled':''}>Tekshirish ${I('arrow',18)}</button></div></form>${answerFeedback(w)}`;}
 function answerFeedback(w){if(!state.answered)return '';
- return `<div class="answer-feedback ${state.answerCorrect?'yes':'no'}"><span class="feedback-symbol">${I(state.answerCorrect?'check':'close',22)}</span><div><strong>${state.answerCorrect?'Ajoyib! To‘g‘ri javob!':'Hozircha noto‘g‘ri, davom etamiz!'}</strong><p>To‘g‘ri javob: <b>${esc(questionMode()==='choice'?w.uz:w.en)}</b>. ${esc(w.example_en)} ${esc(w.example_uz)}</p></div></div>
-`;
+ return `<div class="answer-feedback ${state.answerCorrect?'yes':'no'}"><span class="feedback-symbol">${I(state.answerCorrect?'check':'close',22)}</span><div><strong>${state.answerCorrect?'Ajoyib! To‘g‘ri javob!':'Hozircha noto‘g‘ri, davom etamiz!'}</strong><p>To‘g‘ri javob: <b>${esc(questionMode()==='choice'?w.uz:w.en)}</b>. ${esc(w.example_en)} ${esc(w.example_uz)}</p></div></div>`;
 }
 function finishPage(){if(!state.sessionFinished)return `<div class="empty-practice panel"><div class="empty-emoji">📚</div><h2>Mashqlarni boshlashga tayyormisiz?</h2><p>So‘zlar bilan ishlash uchun mashq turini tanlang.</p><button class="btn btn-primary" data-action="start" data-mode="cards">Boshlash ${I('arrow')}</button></div>`;
  if(!state.session.length)return `<div class="empty-practice panel"><div class="empty-emoji">🎉</div><h1>Hozircha hammasi bajarildi!</h1><p>Tanlangan mavzuda bugun takrorlash kerak bo‘lgan yoki hali o‘rganilmagan so‘z qolmadi. Ertaga qayta keling yoki boshqa mavzuni tanlang.</p><div class="finish-actions"><button class="btn btn-primary" data-action="set-all-and-start">Barcha mavzularda mashq ${I('arrow',18)}</button><button class="btn btn-secondary" data-action="nav" data-page="library">Lug‘atimni ko‘rish</button></div></div>`;
@@ -247,21 +271,35 @@ document.addEventListener('submit',e=>{
 });
 document.addEventListener('change',e=>{
  if(e.target.id==='library-select'){state.libraryCategory=e.target.value;render();}
- else if(e.target.id==='session-length'){state.sessionLimit=Number(e.target.value);localStorage.setItem('wordora-session-limit',String(state.sessionLimit));}
- else if(e.target.id==='auto-next-toggle'){state.autoNext=e.target.checked;localStorage.setItem('wordora-auto-next',String(state.autoNext));if(state.autoNext)scheduleAutoNext();else cancelAutoNext();}
+ else if(e.target.id==='session-length'){
+   state.sessionLimit=Number(e.target.value);
+   localStorage.setItem('wordora-session-limit',String(state.sessionLimit));
+ }
+ else if(e.target.id==='auto-next-toggle'){
+   state.autoNext=e.target.checked;
+   localStorage.setItem('wordora-auto-next',String(state.autoNext));
+   if(state.autoNext)scheduleAutoNext();else cancelAutoNext();
+ }
 });
 document.addEventListener('keydown',e=>{
  if(state.page!=='practice'||state.sessionFinished||e.altKey||e.ctrlKey||e.metaKey||e.repeat)return;
  const el=e.target;
- if(el.closest('input,textarea,select,[contenteditable="true"]'))return;
+ if(el.closest('input,textarea,select,[contenteditable="true"]')){
+   if(e.key==='Enter' && state.answered && el.id!=='answer-input')e.preventDefault();
+   return;
+ }
  if(el.closest('button,a'))return;
  const mode=questionMode();
- if(mode==='choice'&&!state.answered&&/^[1-4]$/.test(e.key)){e.preventDefault();selectChoice(Number(e.key)-1);return;}
- if(mode==='cards'){
-  if((e.key===' '||e.key==='Enter')&&!state.revealed){e.preventDefault();state.revealed=true;render();return;}
-  if(state.revealed&&['1','2','3'].includes(e.key)){e.preventDefault();saveAndAdvance([1,3,5][Number(e.key)-1]);return;}
+ if(mode==='choice'&&!state.answered&&/^[1-4]$/.test(e.key)){
+   e.preventDefault();selectChoice(Number(e.key)-1);return;
  }
- if(e.key==='Enter'&&state.answered){e.preventDefault();saveAndAdvance(state.quality);return;}
+ if(mode==='cards'){
+   if((e.key===' '||e.key==='Enter')&&!state.revealed){e.preventDefault();state.revealed=true;render();return;}
+   if(state.revealed&&['1','2','3'].includes(e.key)){
+     e.preventDefault();saveAndAdvance([1,3,5][Number(e.key)-1]);return;
+   }
+ }
+ if(e.key==='Enter' && state.answered){e.preventDefault();saveAndAdvance(state.quality);return;}
  if((e.key===' '||e.key.toLowerCase()==='p')&&mode==='listen'&&!state.answered){e.preventDefault();say(state.session[state.index].en);}
 });
 document.addEventListener('click',async e=>{
