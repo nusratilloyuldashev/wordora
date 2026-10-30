@@ -1,3 +1,26 @@
+# Wordora 4.0
+
+So‘z yodlashning uch bosqichli oqimi, talaffuz, vizual xotira ishoralari, sana bo‘yicha mashqlar, 90% mezonli testlar va takrorlash tizimi.
+
+**O‘rnatish:** [`UPGRADE_4_0_UZ.md`](UPGRADE_4_0_UZ.md) faylini o‘qing.
+
+# Wordora 2.1 — Qulayroq yodlash tajribasi
+
+**Yangi imkoniyatlar (2026-10-30):**
+
+- Har bir mashqda pastki qismga biriktirilgan **doim ko‘rinadigan navigatsiya**. Endi «Keyingi so‘z» uchun sahifani qo‘lda siljitish shart emas.
+- Ixcham savol kartalari, telefon uchun moslashuvchan joylashuv.
+- **Aqlli aralash mashq**: tarjima, yozish, tinglash, kartochka navbatma-navbat.
+- Mashg‘ulot hajmini **5, 10, 15 yoki 20 so‘z** qilib tanlash; tanlov shu brauzerda saqlanadi.
+- **Avtomatik davom etish**: faqat to‘g‘ri javobdan keyin taxminan 2 soniyada keyingi so‘zga o‘tish. Noto‘g‘ri javobda tushuntirishni o‘qib olishingiz uchun to‘xtaydi; xohlasangiz o‘chirishingiz mumkin.
+- **Klaviatura bilan boshqarish:** 1–4 javob tanlash, Enter keyingi so‘z, kartochkada Space/Enter javobni ochish, baholash uchun 1–3.
+- «Bilmayman, o‘tkazish»: so‘z tashlab ketilsa ham takrorlash jadvalida xato urinish sifatida saqlanadi.
+- Yozish va tinglash savollarida kursor javob maydoniga avtomatik o‘tadi (sahifa sakramaydi).
+
+**Ma’lumotlar bazasini qayta yaratish shart emas.** Eski `supabase/setup.sql` o‘zgarishsiz qoladi va o‘rganish tarixi saqlanadi.
+
+---
+
 # Wordora 2.0 — GitHub + Netlify + Supabase
 
 **Inglizcha so‘zlarni o‘zbekcha interfeys orqali o‘rganish uchun shaxsiy veb-platforma.**
