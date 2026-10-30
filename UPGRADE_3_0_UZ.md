@@ -19,7 +19,7 @@
 4. `Success. No rows returned` yoki muvaffaqiyatli javob chiqqanini tekshiring.
 5. Netlify dagi Wordora sahifasini `Ctrl+Shift+R` bilan yangilang.
 
-`setup.sql` ni qayta ishga tushirish kerak emas! Ushbu migratsiya jadvallarni o‘chirmaydi va mavjud `reviews`/`progress` saqlanadi. Migratsiyadan oldin eski lug‘at va mashq funksiyalari ishlayveradi, faqat yangi teglashni saqlash vaqtincha cheklanadi.
+`setup.sql` ni qayta ishga tushirish kerak emas! Ushbu migratsiya jadvallarni o‘chirmaydi va mavjud `reviews`/`progress` saqlanadi. Migratsiyadan oldin eski lug‘at va mashq funksiyalari ishlaydi. Yangi so‘zlarni ham qo‘shish mumkin, biroq mavzu va so‘z turkumi teglari migratsiyagacha saqlanmaydi; keyin ularni tahrirlash mumkin.
 
 ## Saytni joylashtirish
 
