@@ -20,8 +20,8 @@ const v3TopicName = key => v3Topics.find(t=>t[0]===key)?.[2] || 'Boshqa mavzu';
 const v3TypeName = key => v3Types.find(t=>t[0]===key)?.[1] || 'Belgilanmagan';
 const v3WordTopic = w => w.topic && w.topic!=='other' ? w.topic : (w.owner_id ? (w.topic||'other') : w.category);
 const v3WordType = w => w.word_type && w.word_type!=='other' ? w.word_type : (w.category==='verbs'?'verb':(w.word_type||'other'));
-const v3Stage = w => !w.due_on ? 'new' : Number(w.repetitions||0)>=3 ? 'mastered' : 'learning';
-const v3Due = w => !!w.due_on && w.due_on<=localISODate();
+const v3Stage = w => typeof window.WordoraV4Stage==='function' ? window.WordoraV4Stage(w) : (!w.due_on ? 'new' : Number(w.repetitions||0)>=3 ? 'mastered' : 'learning');
+const v3Due = w => typeof window.WordoraV4Due==='function' ? window.WordoraV4Due(w) : (!!w.due_on && w.due_on<=localISODate());
 const v3Summary = () => {
  const words=state.words||[];
  return {total:words.length,new:words.filter(w=>v3Stage(w)==='new').length,
