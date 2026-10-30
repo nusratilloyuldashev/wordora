@@ -109,13 +109,14 @@
       }
       const topic=String(w.topic||'').trim();
       const wordType=String(w.word_type||'').trim();
-      if(!taxonomyReady)throw new Error('Avval Supabase upgrade_3_0.sql yangilanishini bajaring.');
-      if(!['daily','clothes','weather','home','food','travel','transport','technology','study','health','shopping','sports','nature','feelings','verbs','other'].includes(topic))throw new Error('Mavzu noto‘g‘ri.');
-      if(!['noun','verb','adjective','adverb','modal','pronoun','preposition','conjunction','number','phrase','other'].includes(wordType))throw new Error('So‘z turkumi noto‘g‘ri.');
-      const data=unwrap(await client.from('words').insert({
-        owner_id:user.id,category:'mine',topic,word_type:wordType,en:w.en,uz:w.uz,
-        example_en:w.example_en,example_uz:w.example_uz,level:'Custom',
-      }).select('id').single());
+      const payload={owner_id:user.id,category:'mine',en:w.en,uz:w.uz,
+        example_en:w.example_en,example_uz:w.example_uz,level:'Custom'};
+      if(taxonomyReady){
+        if(!['daily','clothes','weather','home','food','travel','transport','technology','study','health','shopping','sports','nature','feelings','verbs','other'].includes(topic))throw new Error('Mavzu noto‘g‘ri.');
+        if(!['noun','verb','adjective','adverb','modal','pronoun','preposition','conjunction','number','phrase','other'].includes(wordType))throw new Error('So‘z turkumi noto‘g‘ri.');
+        payload.topic=topic;payload.word_type=wordType;
+      }
+      const data=unwrap(await client.from('words').insert(payload).select('id').single());
       return { id:data.id, message:'So‘z qo‘shildi' };
     }
     if (/^\/words\/\d+$/.test(path) && options.method==='PATCH') {
