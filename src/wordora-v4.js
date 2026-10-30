@@ -89,7 +89,7 @@ const v4PreviousLoad=loadCore;
 loadCore=async function(){await v4PreviousLoad();await v4Fetch();};
 function v4Warning(){return V4.ready?'':`<div class="v4-notice" role="status">⚠️ ${esc(V4.announce||'Yangi o‘rganish bazasi tekshirilmoqda.')}<p>Yangi o‘rganish va test natijalarini saqlash uchun Supabase SQL Editor’da <code>supabase/upgrade_4_0.sql</code> ni bir marta bajaring. Eski ma’lumotlar o‘chirilmaydi.</p></div>`;}
 const v4Inputs=()=>`<div class="v4-setup-grid"><label>Mavzu<select id="v4-topic"><option value="all">Barcha mavzular</option>${v3Topics.map(([k,icon,label])=>`<option value="${k}" ${V4.topic===k?'selected':''}>${icon} ${esc(label)}</option>`).join('')}</select></label><label>So‘z turkumi<select id="v4-type"><option value="all">Barcha turkumlar</option>${v3Types.map(([k,name])=>`<option value="${k}" ${V4.wordType===k?'selected':''}>${esc(name)}</option>`).join('')}</select></label><label>Nechta so‘z?<input id="v4-count" type="number" min="1" max="40" step="1" value="${V4.count}" aria-label="Yodlash uchun so‘zlar soni"></label></div>`;
-const v4Matches=w=>(V4.topic==='all'||v3WordTopic(w)===V4.topic)&&(V4.wordType==='all'||v3WordType(w)===V4.wordType);
+const v4Matches=w=>(V4.topic==='all'||v3WordTopic(w)===V4.topic)&&(V4.wordType==='all'||v3WordType(w)===V4.wordType)&&(!window.WordoraV5LessonMatch||window.WordoraV5LessonMatch(w));
 function v4LessonPage(){
   const newWords=v4Words().filter(w=>!v4Introduced(w)&&v4Matches(w));
   const resume=V4.lesson?.ids?.length;
@@ -300,7 +300,7 @@ document.addEventListener('submit',e=>{
   e.preventDefault();e.stopImmediatePropagation();const value=e.target.elements['v4-answer']?.value||'';
   const L=V4.lesson,w=v4LessonWord();if(!L||!w)return;
   if(normalize(value)===normalize(w.en)){L.phase='checked';}else{L.phase='wrong';L.errors++;}
-  v4SaveLesson();render();
+  v4SaveLesson();render();if(L.phase==='checked')window.WordoraV5Schedule?.();
  }else if(e.target.id==='v4-test-form'){
   e.preventDefault();e.stopImmediatePropagation();const input=e.target.querySelector('input');if(!input?.value.trim())return;v4AnswerExam(input.value);
  }
