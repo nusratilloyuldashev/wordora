@@ -12,8 +12,8 @@ test('words keep owner and category while adding independent topic and POS',()=>
 test('word tags safely persisted and missing migration detected',()=>{
  const api=read('src/supabase-api.js');
  assert.match(api,/taxonomyReady = false/);
- assert.match(api,/\.insert\(\{/);
- assert.match(api,/topic,word_type:wordType/);
+ assert.match(api,/\.insert\(payload\)/);
+ assert.match(api,/payload.topic=topic;payload.word_type=wordType/);
  assert.match(api,/method==='PATCH'/);
  assert.match(api,/\.eq\('owner_id',user\.id\)/);
 });
