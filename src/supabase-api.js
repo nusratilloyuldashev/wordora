@@ -3,7 +3,25 @@
  */
 'use strict';
 (function () {
-  const categories = [{"slug": "daily", "name": "Kundalik hayot", "emoji": "☀️", "color": "#FFF0CE"}, {"slug": "verbs", "name": "Asosiy fe’llar", "emoji": "⚡", "color": "#E5E2FF"}, {"slug": "food", "name": "Ovqat va ichimlik", "emoji": "🥑", "color": "#E1F4E9"}, {"slug": "travel", "name": "Sayohat", "emoji": "✈️", "color": "#DDEBFF"}, {"slug": "feelings", "name": "His-tuyg‘ular", "emoji": "💗", "color": "#FFE2EB"}, {"slug": "study", "name": "O‘qish va ish", "emoji": "📚", "color": "#FFF0DE"}, {"slug": "nature", "name": "Tabiat", "emoji": "🌿", "color": "#E6F4DD"}, {"slug": "technology", "name": "Texnologiya", "emoji": "💻", "color": "#E7E9FF"}, {"slug": "mine", "name": "Mening so‘zlarim", "emoji": "✍️", "color": "#E7E2FF"}];
+  const categories = [
+    {slug:'daily',name:'Kundalik hayot',emoji:'☀️'},
+    {slug:'clothes',name:'Kiyim-kechak',emoji:'👕'},
+    {slug:'weather',name:'Ob-havo',emoji:'🌦️'},
+    {slug:'home',name:'Uy va jihozlar',emoji:'🏠'},
+    {slug:'food',name:'Ovqat va ichimlik',emoji:'🥑'},
+    {slug:'travel',name:'Sayohat',emoji:'✈️'},
+    {slug:'transport',name:'Transport',emoji:'🚗'},
+    {slug:'technology',name:'Texnologiya',emoji:'💻'},
+    {slug:'study',name:'O‘qish va ish',emoji:'📚'},
+    {slug:'health',name:'Salomatlik',emoji:'🩺'},
+    {slug:'shopping',name:'Xaridlar',emoji:'🛍️'},
+    {slug:'sports',name:'Sport',emoji:'⚽'},
+    {slug:'nature',name:'Tabiat',emoji:'🌿'},
+    {slug:'feelings',name:'His-tuyg‘ular',emoji:'💗'},
+    {slug:'verbs',name:'Asosiy fe’llar',emoji:'⚡'},
+    {slug:'other',name:'Boshqa mavzu',emoji:'🗂️'},
+    {slug:'mine',name:'Men qo‘shgan so‘zlar',emoji:'✍️'}
+  ];
   const cfg = window.WORDORA_CONFIG || {};
   const isConfigured = /^https:\/\//.test(cfg.url || '') &&
     !/example|YOUR_PROJECT|PASTE_ME/i.test(cfg.url) &&
@@ -34,24 +52,33 @@
     if (!data?.user) throw new Error('Sessiya yakunlandi. Qayta kiring.');
     return data.user;
   }
+  let taxonomyReady = true;
   async function allWords() {
     const list = [];
-    // Supabase API commonly defaults to a max of 1000 rows per query.
     for (let start = 0; start < 6000; start += 1000) {
-      const rows = unwrap(await client.from('words')
-        .select('id,owner_id,category,en,uz,example_en,example_uz,level,progress(repetitions,due_on,correct_count,wrong_count,interval_days)')
-        .order('id', { ascending: false }).range(start, start + 999));
-      const chunk = rows.map(({ progress, ...w }) => ({
-        ...w, repetitions: progress?.[0]?.repetitions ?? null,
-        due_on: progress?.[0]?.due_on ?? null,
-        correct_count: progress?.[0]?.correct_count ?? null,
-        wrong_count: progress?.[0]?.wrong_count ?? null,
-        interval_days: progress?.[0]?.interval_days ?? null,
+      const columns='id,owner_id,category,en,uz,example_en,example_uz,level,topic,word_type,progress(repetitions,due_on,correct_count,wrong_count,interval_days)';
+      const legacyColumns='id,owner_id,category,en,uz,example_en,example_uz,level,progress(repetitions,due_on,correct_count,wrong_count,interval_days)';
+      let response=await client.from('words').select(taxonomyReady?columns:legacyColumns).order('id',{ascending:false}).range(start,start+999);
+      if (response.error && (response.error.code==='42703'||/column .* does not exist|could not find the .* column/i.test(response.error.message||''))) {
+        taxonomyReady = false;
+        response=await client.from('words').select(legacyColumns).order('id',{ascending:false}).range(start,start+999);
+      }
+      const rows=unwrap(response);
+      const chunk=rows.map(({progress,...w})=>({
+        ...w,
+        topic:w.topic||(w.owner_id?'other':w.category),
+        word_type:w.word_type||(w.category==='verbs'?'verb':'other'),
+        repetitions:progress?.[0]?.repetitions??null,
+        due_on:progress?.[0]?.due_on??null,
+        correct_count:progress?.[0]?.correct_count??null,
+        wrong_count:progress?.[0]?.wrong_count??null,
+        interval_days:progress?.[0]?.interval_days??null,
       }));
       list.push(...chunk);
       if (rows.length < 1000) break;
     }
-    return { words: list, count: list.length };
+    window.WordoraBackend.taxonomyReady = taxonomyReady;
+    return {words:list,count:list.length};
   }
   async function api(path, options = {}) {
     if (configError) throw new Error(configError);
@@ -80,11 +107,27 @@
       if (w.en.length > 80 || w.uz.length > 120 || w.example_en.length > 240 || w.example_uz.length > 240) {
         throw new Error('Matn belgilangan uzunlikdan oshib ketdi.');
       }
-      const data = unwrap(await client.from('words').insert({
-        owner_id: user.id, category:'mine', en:w.en, uz:w.uz,
+      const topic=String(w.topic||'').trim();
+      const wordType=String(w.word_type||'').trim();
+      if(!taxonomyReady)throw new Error('Avval Supabase upgrade_3_0.sql yangilanishini bajaring.');
+      if(!['daily','clothes','weather','home','food','travel','transport','technology','study','health','shopping','sports','nature','feelings','verbs','other'].includes(topic))throw new Error('Mavzu noto‘g‘ri.');
+      if(!['noun','verb','adjective','adverb','modal','pronoun','preposition','conjunction','number','phrase','other'].includes(wordType))throw new Error('So‘z turkumi noto‘g‘ri.');
+      const data=unwrap(await client.from('words').insert({
+        owner_id:user.id,category:'mine',topic,word_type:wordType,en:w.en,uz:w.uz,
         example_en:w.example_en,example_uz:w.example_uz,level:'Custom',
       }).select('id').single());
       return { id:data.id, message:'So‘z qo‘shildi' };
+    }
+    if (/^\/words\/\d+$/.test(path) && options.method==='PATCH') {
+      if(!taxonomyReady)throw new Error('Avval Supabase upgrade_3_0.sql yangilanishini bajaring.');
+      const user=await needUser();
+      const id=Number(path.slice('/words/'.length));
+      const data=JSON.parse(options.body||'{}');
+      const topic=String(data.topic||'');const type=String(data.word_type||'');
+      if(!categories.some(c=>c.slug===topic&&topic!=='mine')||!['noun','verb','adjective','adverb','modal','pronoun','preposition','conjunction','number','phrase','other'].includes(type))throw new Error('Noto‘g‘ri mavzu yoki turkum.');
+      const changed=unwrap(await client.from('words').update({topic,word_type:type}).eq('id',id).eq('owner_id',user.id).select('id'));
+      if(!changed.length)throw new Error('Shaxsiy so‘z topilmadi yoki o‘zgartirishga ruxsat yo‘q.');
+      return {ok:true};
     }
     const match = /^\/words\/(\d+)$/.exec(path);
     if (match && options.method === 'DELETE') {
@@ -96,5 +139,5 @@
     }
     throw new Error('Noma’lum API amali: ' + path);
   }
-  window.WordoraBackend = { api, client, configError, profile };
+  window.WordoraBackend = { api, client, configError, profile, taxonomyReady: true };
 })();
