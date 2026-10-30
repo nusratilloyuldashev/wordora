@@ -57,6 +57,8 @@ create policy wordora_update_personal_tags on public.words
  using (owner_id=(select auth.uid()) and category='mine')
  with check (owner_id=(select auth.uid()) and category='mine');
 commit;
+-- Refresh PostgREST's schema cache so the new columns become visible promptly.
+notify pgrst, 'reload schema';
 
 -- After success: reload https://wordora-english.netlify.app with Ctrl+Shift+R.
 -- Personal vocabulary and review history are unchanged.
