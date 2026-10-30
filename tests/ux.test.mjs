@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
 test('practice never forces scroll on each new question',()=>{
- assert.doesNotMatch(app,/render\(\);\s*window\.scrollTo\(\{top:0/);
+ const afterSave=app.split('async function saveAndAdvance(quality)')[1].split('function checkTyped')[0];
+ assert.doesNotMatch(afterSave,/window\.scrollTo|scrollIntoView/);
  assert.doesNotMatch(app,/positionPractice\(/);
 });
 test('action buttons stay visible while practicing',()=>{
