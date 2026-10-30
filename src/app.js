@@ -55,7 +55,6 @@ let autoNextTimer=null;
 function cancelAutoNext(){if(autoNextTimer!==null){clearTimeout(autoNextTimer);autoNextTimer=null;}}
 function questionMode(){return state.studyMode==='mix'?['choice','write','listen','cards'][state.index%4]:state.studyMode;}
 function focusAnswer(){if(state.page!=='practice'||state.answered||state.sessionFinished)return;if(['write','listen'].includes(questionMode()))requestAnimationFrame(()=>document.getElementById('answer-input')?.focus({preventScroll:true}));}
-function positionPractice(){requestAnimationFrame(()=>document.querySelector('.practice-shell')?.scrollIntoView({block:'start',behavior:'instant'}));}
 function scheduleAutoNext(){cancelAutoNext();if(!state.autoNext||!state.answered||!state.answerCorrect||state.saving)return;const idx=state.index;autoNextTimer=setTimeout(()=>{autoNextTimer=null;if(state.page==='practice'&&state.index===idx&&state.answered&&!state.saving)saveAndAdvance(state.quality);},1900);}
 function selectChoice(i){if(state.answered||state.page!=='practice'||questionMode()!=='choice'||!Number.isInteger(i)||i<0||i>=state.options.length)return;state.chosenIndex=i;const word=state.session[state.index];state.answerCorrect=normalize(state.options[i])===normalize(word.uz);state.quality=state.answerCorrect?4:1;state.answered=true;render();scheduleAutoNext();}
 
@@ -229,7 +228,7 @@ async function saveAndAdvance(quality){
   state.index++;
   if(state.index>=state.session.length){state.sessionFinished=true;await loadCore();}
   else initializeQuestion();
-  render();if(!state.sessionFinished)positionPractice();
+  render();
  }catch(e){toast(e.message);}finally{state.saving=false;}
 }
 function checkTyped(){if(state.answered)return;const input=document.getElementById('answer-input');if(!input)return;
