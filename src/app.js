@@ -35,7 +35,8 @@ const modes = [
  {id:'cards', name:'Kartochkalar', subtitle:'So‘zni ko‘r va eslab qol', description:'Ma’noni ochib, o‘zingni bahola', color:'violet', icon:'layers', badge:'Xotirani kuchaytir'},
  {id:'choice', name:'Tarjimani top', subtitle:'4 ta variantdan to‘g‘risini tanla', description:'Bilimingni tez sinovdan o‘tkaz', color:'blue', icon:'target', badge:'Mini-test'},
  {id:'write', name:'Yozib top', subtitle:'O‘zbekchasidan inglizchasini yoz', description:'So‘zni faol xotiradan chiqar', color:'peach', icon:'pen', badge:'Yozma mashq'},
- {id:'listen', name:'Tinglab yoz', subtitle:'Talaffuzini tingla va so‘zni yoz', description:'Eshitish va imloni birga o‘rgan', color:'mint', icon:'headphones', badge:'Talaffuz mashqi'}
+ {id:'listen', name:'Tinglab yoz', subtitle:'Talaffuzini tingla va so‘zni yoz', description:'Eshitish va imloni birga o‘rgan', color:'mint', icon:'headphones', badge:'Talaffuz mashqi'},
+ {id:'mix', name:'Aqlli aralash mashq', subtitle:'4 mashq navbatma-navbat', description:'Bitta so‘zni turli usullarda mustahkamlang', color:'violet', icon:'sparkle', badge:'Tavsiya etiladi'}
 ];
 let state = {
  user:null, authMode:'register',
@@ -44,10 +45,20 @@ let state = {
  studyMode:'cards', session:[], index:0, revealed:false, answerValue:'',
  answered:false, answerCorrect:false, quality:null, chosenIndex:-1,
  options:[], sessionCorrect:0, sessionWrong:0, sessionFinished:false,
- showAdd:false, saving:false, pendingWord:false
+ showAdd:false, saving:false, pendingWord:false,
+ sessionLimit: Number(localStorage.getItem('wordora-session-limit')) || 10,
+ autoNext: localStorage.getItem('wordora-auto-next') === 'true'
 };
 
 const { api, client, configError, profile } = window.WordoraBackend;
+let autoNextTimer=null;
+function cancelAutoNext(){if(autoNextTimer!==null){clearTimeout(autoNextTimer);autoNextTimer=null;}}
+function questionMode(){return state.studyMode==='mix'?['choice','write','listen','cards'][state.index%4]:state.studyMode;}
+function focusAnswer(){if(state.page!=='practice'||state.answered||state.sessionFinished)return;if(['write','listen'].includes(questionMode()))requestAnimationFrame(()=>document.getElementById('answer-input')?.focus({preventScroll:true}));}
+function positionPractice(){requestAnimationFrame(()=>document.querySelector('.practice-shell')?.scrollIntoView({block:'start',behavior:'instant'}));}
+function scheduleAutoNext(){cancelAutoNext();if(!state.autoNext||!state.answered||!state.answerCorrect||state.saving)return;const idx=state.index;autoNextTimer=setTimeout(()=>{autoNextTimer=null;if(state.page==='practice'&&state.index===idx&&state.answered&&!state.saving)saveAndAdvance(state.quality);},1900);}
+function selectChoice(i){if(state.answered||state.page!=='practice'||questionMode()!=='choice'||!Number.isInteger(i)||i<0||i>=state.options.length)return;state.chosenIndex=i;const word=state.session[state.index];state.answerCorrect=normalize(state.options[i])===normalize(word.uz);state.quality=state.answerCorrect?4:1;state.answered=true;render();scheduleAutoNext();}
+
 function toast(message,type='error'){
   state.alert={message,type};
   let bar=document.getElementById('toast');
@@ -88,7 +99,7 @@ async function authSubmit(form){
   }
  }catch(e){toast(e.message);}finally{state.busy=false;render();}
 }
-function nav(page){state.page=page; state.sessionFinished=false;state.showAdd=false; render();window.scrollTo({top:0,behavior:'smooth'});}
+function nav(page){cancelAutoNext();state.page=page;state.sessionFinished=false;state.showAdd=false;render();window.scrollTo({top:0,behavior:'instant'});}
 function catName(slug){return state.categories.find(c=>c.slug===slug)?.name||'So‘zlar';}
 function p(value,max){return Math.max(0,Math.min(100,Math.round((value/Math.max(1,max))*100)));}
 function formatDay(dateString){return ['Ya','Du','Se','Ch','Pa','Ju','Sh'][new Date(dateString+'T12:00:00').getDay()];}
@@ -138,9 +149,9 @@ function dashboardPage(){const s=state.stats||{};
  <div class="stat-card"><span class="stat-icon mint">${I('check',24)}</span><span class="stat-number">${s.learned||0}</span><span class="stat-label">Mustahkamlanayotgan</span><span class="stat-sub">Kamida 2 marta eslangan</span></div>
  <div class="stat-card"><span class="stat-icon peach">${I('rotate',24)}</span><span class="stat-number">${s.due||0}</span><span class="stat-label">Takrorlash kerak</span><span class="stat-sub">Bugungi navbatda</span></div>
  <div class="stat-card"><span class="stat-icon blue">${I('flame',24)}</span><span class="stat-number">${s.streak||0} <small>kun</small></span><span class="stat-label">Ketma-ket o‘qish</span><span class="stat-sub">Odat hosil qiling</span></div></section>
- <div class="section-heading with-top"><div><h2>Bugun nimani mashq qilamiz?</h2><p>O‘zingizga qulay usulni tanlang</p></div></div>
+ <div class="section-heading with-top"><div><h2>Bugun nimani mashq qilamiz?</h2><p>O‘zingizga qulay usulni tanlang</p></div><label class="session-length-control" for="session-length">Mashg‘ulot hajmi <select id="session-length" aria-label="Bitta mashg‘ulotdagi so‘zlar soni"><option value="5" ${state.sessionLimit===5?'selected':''}>5 ta so‘z</option><option value="10" ${state.sessionLimit===10?'selected':''}>10 ta so‘z</option><option value="15" ${state.sessionLimit===15?'selected':''}>15 ta so‘z</option><option value="20" ${state.sessionLimit===20?'selected':''}>20 ta so‘z</option></select></label></div>
  <div class="category-scroller"><button class="category-chip ${state.category==='all'?'selected':''}" data-action="category" data-category="all">✨ Barcha mavzular</button>${state.categories.map(c=>`<button class="category-chip ${state.category===c.slug?'selected':''}" data-action="category" data-category="${esc(c.slug)}">${c.emoji} ${esc(c.name)}</button>`).join('')}</div>
- <section class="mode-grid">${modes.map((m,i)=>`<button class="mode-card ${m.color}" data-action="start" data-mode="${m.id}"><div class="mode-top"><div class="mode-icon">${I(m.icon,28)}</div><span class="mode-arrow">${I('arrow',22)}</span></div><div class="mode-label">${m.badge}</div><h3>${m.name}</h3><p>${m.subtitle}</p><div class="mode-count">${String(i+1).padStart(2,'0')} / 04</div></button>`).join('')}</section>
+ <section class="mode-grid">${modes.map((m,i)=>`<button class="mode-card ${m.color}" data-action="start" data-mode="${m.id}"><div class="mode-top"><div class="mode-icon">${I(m.icon,28)}</div><span class="mode-arrow">${I('arrow',22)}</span></div><div class="mode-label">${m.badge}</div><h3>${m.name}</h3><p>${m.subtitle}</p><div class="mode-count">${String(i+1).padStart(2,'0')} / ${String(modes.length).padStart(2,'0')}</div></button>`).join('')}</section>
  <section class="bottom-grid"><div class="panel activity-panel"><div class="panel-title"><div><h3>Haftalik faollik</h3><p>Har kuni oz-ozdan mashq qiling</p></div><span class="graph-symbol">${I('trend',22)}</span></div>
  <div class="bar-chart">${week.map(d=>`<div class="bar-col" title="${esc(d.date)}: ${d.count} mashq"><span class="bar-num">${d.count||''}</span><div class="bar-track"><div class="bar-fill ${d.date===localISODate()?'current':''}" style="height:${Math.max(d.count?7:3,p(d.count,max))}%"></div></div><span class="bar-day">${esc(formatDay(d.date))}</span></div>`).join('')}</div></div>
  <div class="panel goal-panel"><div class="panel-title"><div><h3>Kunlik maqsad</h3><p>Bugun ${s.daily_goal||15} ta mashq bajarish</p></div><span class="graph-symbol">${I('target',22)}</span></div><div class="goal-body"><div class="goal-ring" style="--pct:${goalPct}"><div><strong>${goalPct}%</strong><small>Bajarildi</small></div></div><div class="goal-details"><div class="goal-count"><strong>${s.practiced_today||0}</strong> / ${s.daily_goal||15}</div><p>${(s.practiced_today||0)>=(s.daily_goal||15)?'Ajoyib! Bugungi maqsadga erishdingiz.':'Har bir urinish sizni maqsadga yaqinlashtiradi.'}</p><button class="text-link" data-action="start" data-mode="choice">Davom etish ${I('arrow',16)}</button></div></div></div></section>`;
@@ -161,38 +172,41 @@ function makeOptions(word){
   .slice(0,3).map(w=>w.uz);
  return shuffle([word.uz,...other]);
 }
-function initializeQuestion(){state.revealed=false;state.answered=false;state.answerCorrect=false;state.quality=null;state.chosenIndex=-1;state.answerValue='';state.options=makeOptions(state.session[state.index]);}
+function initializeQuestion(){cancelAutoNext();state.revealed=false;state.answered=false;state.answerCorrect=false;state.quality=null;state.chosenIndex=-1;state.answerValue='';state.options=makeOptions(state.session[state.index]);}
 async function startPractice(mode){
- if(state.busy)return;
+ if(state.busy)return;cancelAutoNext();
  state.busy=true;render();
  try{
-  const result=await api(`/session?category=${encodeURIComponent(state.category)}&limit=10`);
+  const result=await api(`/session?category=${encodeURIComponent(state.category)}&limit=${state.sessionLimit}`);
   state.session=result.words;state.studyMode=mode;state.index=0;state.sessionCorrect=0;state.sessionWrong=0;state.sessionFinished=!result.words.length;state.page='practice';
   if(result.words.length)initializeQuestion();
-  window.scrollTo({top:0,behavior:'smooth'});
- }catch(e){toast(e.message);}finally{state.busy=false;render();}
+  window.scrollTo({top:0,behavior:'instant'});
+ }catch(e){toast(e.message);}finally{state.busy=false;render();focusAnswer();}
 }
 function practicePage(){if(state.sessionFinished||!state.session.length)return finishPage();
- const w=state.session[state.index],mode=state.studyMode,m=modes.find(a=>a.id===mode),n=state.session.length;
+ const w=state.session[state.index],mode=questionMode(),m=modes.find(a=>a.id===mode),n=state.session.length;
  let content='';
  if(mode==='cards')content=`<div class="practice-instruction">So‘zning ma’nosini eslashga harakat qiling</div>
  <button class="flashcard ${state.revealed?'flipped':''}" data-action="flip" aria-label="Kartochkani aylantirish"><div class="flashcard-top"><span>ENGLISH</span><span>${I('sparkle',19)}</span></div><div class="flashcard-word">${esc(w.en)}</div>
  ${state.revealed?`<div class="flashcard-translate">${esc(w.uz)}</div><div class="flashcard-example">${esc(w.example_en)}<br><small>${esc(w.example_uz)}</small></div>`:`<div class="flashcard-help">${I('eye',18)} Javobni ko‘rish uchun kartani bosing</div>`}
  <div class="flashcard-footer">${state.revealed?'O‘zingizni baholang':'BILASIZMI?'}</div></button>
- ${state.revealed?`<div class="rate-buttons"><button class="btn-rate forgot" data-action="rate" data-quality="1">${I('close',18)} Esimda yo‘q</button><button class="btn-rate hard" data-action="rate" data-quality="3">${I('rotate',18)} Qiyin bo‘ldi</button><button class="btn-rate knew" data-action="rate" data-quality="5">${I('check',18)} Bilaman!</button></div>`:`<div class="help-note">Ma’noni aytib ko‘ring, keyin javobni oching.</div>`}`;
+ ${state.revealed?`<div class="help-note">Javobni eslab ko‘rdingizmi? Quyida o‘zingizni baholang.</div>`:`<div class="help-note">Ma’noni aytib ko‘ring, keyin javobni oching.</div>`}`;
  if(mode==='choice')content=`<div class="practice-instruction">Ushbu so‘zning to‘g‘ri tarjimasini tanlang</div><div class="question-word">${esc(w.en)} <button class="listen-inline" data-action="speak" title="Talaffuzini eshitish">${I('sound',23)}</button></div><div class="question-subtitle">Qaysi javob to‘g‘ri?</div>
- <div class="choice-list">${state.options.map((option,i)=>{const picked=state.chosenIndex===i,correct=normalize(option)===normalize(w.uz);return `<button class="choice-option ${state.answered?(correct?'correct':picked?'incorrect':'') : ''}" data-action="choose" data-index="${i}" ${state.answered?'disabled':''}><span class="option-letter">${'ABCD'[i]}</span><span>${esc(option)}</span>${state.answered&&correct?I('check',20):state.answered&&picked?I('close',20):''}</button>`}).join('')}</div>${answerFeedback(w)}`;
+ <div class="choice-list">${state.options.map((option,i)=>{const picked=state.chosenIndex===i,correct=normalize(option)===normalize(w.uz);return `<button class="choice-option ${state.answered?(correct?'correct':picked?'incorrect':'') : ''}" data-action="choose" data-index="${i}" ${state.answered?'disabled':''} aria-label="${i+1}-variant: ${esc(option)}"><span class="option-letter">${i+1}</span><span>${esc(option)}</span>${state.answered&&correct?I('check',20):state.answered&&picked?I('close',20):''}</button>`}).join('')}</div>${answerFeedback(w)}`;
  if(mode==='write')content=`<div class="practice-instruction">O‘zbekcha ma’nosini o‘qing va inglizchasini yozing</div><div class="prompt-bubble">O‘ZBEKCHA TARJIMA</div><div class="question-word translation">${esc(w.uz)}</div><div class="question-subtitle">Bu so‘z ingliz tilida qanday yoziladi?</div>${typeAnswerForm(w)}`;
  if(mode==='listen')content=`<div class="practice-instruction">Talaffuzini tinglang va eshitgan so‘zingizni yozing</div><div class="listen-block"><button class="listen-main" data-action="speak" aria-label="So‘zni eshitish">${I('sound',36)}</button><div>So‘zni tinglash uchun bosing</div><small>Kerak bo‘lsa, qayta eshiting</small></div>${typeAnswerForm(w)}`;
  return `<div class="practice-shell"><div class="practice-header"><button class="btn-back" data-action="nav" data-page="dashboard">${I('back',19)} Bosh sahifaga qaytish</button><span class="practice-mode-label">${I(m.icon,18)} ${m.name}</span></div>
- <div class="practice-progress-head"><div><div class="overline">KICHIK QADAMLAR, KATTA NATIJALAR</div><h1>${m.name}</h1><p>${esc(catName(state.category))} · 10 tagacha so‘z</p></div><div class="progress-count"><b>${state.index+1}</b> / ${n}<small>SO‘Z</small></div></div>
- <div class="progress-track"><div style="width:${p(state.index,n)}%"></div></div>
- <div class="quiz-card">${content}</div><div class="quiz-tip">${I('sparkle',17)} Xato qilishdan qo‘rqmang. Qiyin so‘zlar keyinroq yana qaytadi.</div></div>`;
+ <div class="practice-progress-head"><div><div class="overline">KICHIK QADAMLAR, KATTA NATIJALAR</div><h1>${state.studyMode==='mix'?'Aralash mashq · ':''}${m.name}</h1><p>${esc(catName(state.category))} · ${n} ta so‘z</p></div><div class="progress-count"><b>${state.index+1}</b> / ${n}<small>SO‘Z</small></div></div>
+ <div class="progress-track" role="progressbar" aria-label="Mashg‘ulot davomiyligi" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${state.index}"><div style="width:${p(state.index,n)}%"></div></div>
+ <div class="quiz-card" aria-live="polite">${content}</div>
+ <div class="practice-actionbar"><div class="practice-action-summary"><strong>${state.answered?(state.answerCorrect?'✓ To‘g‘ri javob':'✦ Xatolar orqali o‘rganamiz'):mode==='cards'?'Avval o‘zingiz eslab ko‘ring':'Tayyor bo‘lgach javob bering'}</strong><span>${state.sessionCorrect+(state.answered&&state.answerCorrect?1:0)} ta to‘g‘ri · ${state.sessionWrong+(state.answered&&!state.answerCorrect?1:0)} ta qayta ko‘rish · <kbd>Enter</kbd> davom</span></div>
+ <div class="practice-actions">${mode==='cards'?(state.revealed?`<div class="rate-buttons"><button class="btn-rate forgot" data-action="rate" data-quality="1">${I('close',17)} Esimda yo‘q</button><button class="btn-rate hard" data-action="rate" data-quality="3">${I('rotate',17)} Qiyin</button><button class="btn-rate knew" data-action="rate" data-quality="5">${I('check',17)} Bilaman!</button></div>`:`<button class="btn btn-primary" data-action="flip">Javobni ko‘rsatish ${I('eye',18)}</button>`):state.answered?`<button class="btn btn-primary next-button" data-action="next" ${state.saving?'disabled':''}>${state.index===n-1?'Natijani ko‘rish':'Keyingi so‘z'} ${I('arrow',19)}</button>`:`<button class="btn btn-secondary btn-skip" data-action="skip">Bilmayman, o‘tkazish ${I('arrow',17)}</button>`}</div>
+ </div><div class="practice-footer"><label class="auto-next-control"><input type="checkbox" id="auto-next-toggle" ${state.autoNext?'checked':''}><span>To‘g‘ri javobdan keyin avtomatik davom etish</span></label><span>${I('sparkle',17)} Qiyin so‘zlar keyin qayta takrorlanadi.</span></div></div>`;
 }
 function typeAnswerForm(w){return `<form id="typing-form" class="typing-form"><label for="answer-input">Sizning javobingiz</label><div class="answer-input-group"><input id="answer-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Inglizcha so‘zni yozing..." ${state.answered?'disabled':''} value="${esc(state.answerValue)}"><button class="btn btn-primary" type="submit" ${state.answered?'disabled':''}>Tekshirish ${I('arrow',18)}</button></div></form>${answerFeedback(w)}`;}
 function answerFeedback(w){if(!state.answered)return '';
- return `<div class="answer-feedback ${state.answerCorrect?'yes':'no'}"><span class="feedback-symbol">${I(state.answerCorrect?'check':'close',22)}</span><div><strong>${state.answerCorrect?'Ajoyib! To‘g‘ri javob!':'Hozircha noto‘g‘ri, davom etamiz!'}</strong><p>To‘g‘ri javob: <b>${esc(state.studyMode==='choice'?w.uz:w.en)}</b>. ${esc(w.example_en)} ${esc(w.example_uz)}</p></div></div>
- <button class="btn btn-primary next-button" data-action="next" ${state.saving?'disabled':''}>${state.index===state.session.length-1?'Natijani ko‘rish':'Keyingi so‘z'} ${I('arrow',19)}</button>`;
+ return `<div class="answer-feedback ${state.answerCorrect?'yes':'no'}"><span class="feedback-symbol">${I(state.answerCorrect?'check':'close',22)}</span><div><strong>${state.answerCorrect?'Ajoyib! To‘g‘ri javob!':'Hozircha noto‘g‘ri, davom etamiz!'}</strong><p>To‘g‘ri javob: <b>${esc(questionMode()==='choice'?w.uz:w.en)}</b>. ${esc(w.example_en)} ${esc(w.example_uz)}</p></div></div>
+`;
 }
 function finishPage(){if(!state.sessionFinished)return `<div class="empty-practice panel"><div class="empty-emoji">📚</div><h2>Mashqlarni boshlashga tayyormisiz?</h2><p>So‘zlar bilan ishlash uchun mashq turini tanlang.</p><button class="btn btn-primary" data-action="start" data-mode="cards">Boshlash ${I('arrow')}</button></div>`;
  if(!state.session.length)return `<div class="empty-practice panel"><div class="empty-emoji">🎉</div><h1>Hozircha hammasi bajarildi!</h1><p>Tanlangan mavzuda bugun takrorlash kerak bo‘lgan yoki hali o‘rganilmagan so‘z qolmadi. Ertaga qayta keling yoki boshqa mavzuni tanlang.</p><div class="finish-actions"><button class="btn btn-primary" data-action="set-all-and-start">Barcha mavzularda mashq ${I('arrow',18)}</button><button class="btn btn-secondary" data-action="nav" data-page="library">Lug‘atimni ko‘rish</button></div></div>`;
@@ -201,24 +215,26 @@ function finishPage(){if(!state.sessionFinished)return `<div class="empty-practi
 function render(){
  if(state.busy&&!state.user){root.innerHTML=authPage();return;}
  root.innerHTML=state.user?pageShell():authPage();
+ focusAnswer();
 }
 function say(word){if(!('speechSynthesis'in window)){toast('Bu brauzer ovozli o‘qishni qo‘llab-quvvatlamaydi.');return;}
  try {speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(word);u.lang='en-US';u.rate=.83;u.pitch=1;const voices=speechSynthesis.getVoices();const voice=voices.find(v=>v.lang.toLowerCase().startsWith('en'));if(voice)u.voice=voice;speechSynthesis.speak(u);}catch{toast('Ovozli o‘qish hozir ishlamadi.');}}
 async function saveAndAdvance(quality){
- if(state.saving)return;state.saving=true;
+ if(state.saving||state.page!=='practice'||!state.session[state.index])return;
+ cancelAutoNext();state.saving=true;
  const w=state.session[state.index];
  try{
-  await api('/reviews',{method:'POST',body:JSON.stringify({word_id:w.id,mode:state.studyMode,quality})});
+  await api('/reviews',{method:'POST',body:JSON.stringify({word_id:w.id,mode:questionMode(),quality})});
   if(quality>=3)state.sessionCorrect++;else state.sessionWrong++;
   state.index++;
   if(state.index>=state.session.length){state.sessionFinished=true;await loadCore();}
   else initializeQuestion();
-  render();window.scrollTo({top:0,behavior:'smooth'});
+  render();if(!state.sessionFinished)positionPractice();
  }catch(e){toast(e.message);}finally{state.saving=false;}
 }
 function checkTyped(){if(state.answered)return;const input=document.getElementById('answer-input');if(!input)return;
  const value=input.value.trim();if(!value){toast('Avval javobingizni yozing.');return;}
- state.answerValue=value;const w=state.session[state.index];state.answerCorrect=normalize(value)===normalize(w.en);state.quality=state.answerCorrect?4:1;state.answered=true;render();}
+ state.answerValue=value;const w=state.session[state.index];state.answerCorrect=normalize(value)===normalize(w.en);state.quality=state.answerCorrect?4:1;state.answered=true;render();scheduleAutoNext();}
 async function addWord(form){if(state.busy)return;
  const body=Object.fromEntries(new FormData(form).entries());state.busy=true;
  try{await api('/words',{method:'POST',body:JSON.stringify(body)});await loadCore();state.showAdd=false;state.libraryCategory='mine';state.search='';toast('Yangi so‘z lug‘atingizga qo‘shildi!','success');render();}
@@ -230,7 +246,25 @@ document.addEventListener('submit',e=>{
  if(e.target.id==='search-form'){e.preventDefault();state.search=e.target.elements.search.value.trim();render();}
  if(e.target.id==='typing-form'){e.preventDefault();checkTyped();}
 });
-document.addEventListener('change',e=>{if(e.target.id==='library-select'){state.libraryCategory=e.target.value;render();}});
+document.addEventListener('change',e=>{
+ if(e.target.id==='library-select'){state.libraryCategory=e.target.value;render();}
+ else if(e.target.id==='session-length'){state.sessionLimit=Number(e.target.value);localStorage.setItem('wordora-session-limit',String(state.sessionLimit));}
+ else if(e.target.id==='auto-next-toggle'){state.autoNext=e.target.checked;localStorage.setItem('wordora-auto-next',String(state.autoNext));if(state.autoNext)scheduleAutoNext();else cancelAutoNext();}
+});
+document.addEventListener('keydown',e=>{
+ if(state.page!=='practice'||state.sessionFinished||e.altKey||e.ctrlKey||e.metaKey||e.repeat)return;
+ const el=e.target;
+ if(el.closest('input,textarea,select,[contenteditable="true"]'))return;
+ if(el.closest('button,a'))return;
+ const mode=questionMode();
+ if(mode==='choice'&&!state.answered&&/^[1-4]$/.test(e.key)){e.preventDefault();selectChoice(Number(e.key)-1);return;}
+ if(mode==='cards'){
+  if((e.key===' '||e.key==='Enter')&&!state.revealed){e.preventDefault();state.revealed=true;render();return;}
+  if(state.revealed&&['1','2','3'].includes(e.key)){e.preventDefault();saveAndAdvance([1,3,5][Number(e.key)-1]);return;}
+ }
+ if(e.key==='Enter'&&state.answered){e.preventDefault();saveAndAdvance(state.quality);return;}
+ if((e.key===' '||e.key.toLowerCase()==='p')&&mode==='listen'&&!state.answered){e.preventDefault();say(state.session[state.index].en);}
+});
 document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-action]');if(!b)return;
  const action=b.dataset.action;
@@ -243,12 +277,8 @@ document.addEventListener('click',async e=>{
  else if(action==='set-all-and-start'){state.category='all';await startPractice('cards');}
  else if(action==='flip'){state.revealed=!state.revealed;render();}
  else if(action==='rate')await saveAndAdvance(Number(b.dataset.quality));
- else if(action==='choose'){
-   if(state.answered)return;
-   state.chosenIndex=Number(b.dataset.index);const chosen=state.options[state.chosenIndex];
-   const word=state.session[state.index];state.answerCorrect=normalize(chosen)===normalize(word.uz);
-   state.quality=state.answerCorrect?4:1;state.answered=true;render();
- }
+ else if(action==='choose')selectChoice(Number(b.dataset.index));
+ else if(action==='skip')await saveAndAdvance(1);
  else if(action==='next')await saveAndAdvance(state.quality);
  else if(action==='speak')say(state.session[state.index].en);
  else if(action==='speak-word'){let w=state.words.find(w=>w.id===Number(b.dataset.wordId));if(w)say(w.en);}
@@ -260,7 +290,7 @@ document.addEventListener('click',async e=>{
    try{await api(`/words/${w.id}`,{method:'DELETE'});await loadCore();render();toast('So‘z o‘chirildi.','success');}catch(err){toast(err.message);}
  }
  else if(action==='logout'){
-   const {error}=await client.auth.signOut();if(error){toast(error.message);return;}
+   cancelAutoNext();const {error}=await client.auth.signOut();if(error){toast(error.message);return;}
    state.user=null;state.page='dashboard';state.authMode='login';render();
  }
 });
