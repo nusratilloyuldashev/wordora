@@ -1,0 +1,12 @@
+
+/* Wordora 6.0: installable PWA and offline mode controls */
+.wordora-offline-banner{position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 20px;margin:12px auto 0;max-width:1220px;border:1px solid #dfd8fc;border-radius:15px;background:#f4f0ff;color:#5b4bb5;font-size:12px;font-weight:750}
+.wordora-offline-banner.offline{background:#fff6e6;border-color:#f1dcb8;color:#805924}
+.wordora-offline-banner.ready{background:#eefbf5;border-color:#cfe9d9;color:#286b4c}
+.wordora-offline-banner .wordora-offline-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.wordora-offline-banner button{border:1px solid currentColor;border-radius:9px;padding:8px 10px;font:inherit;font-size:11px;font-weight:850;color:inherit;background:#fff;cursor:pointer}
+.wordora-offline-banner button:hover{filter:brightness(.96)}
+.wordora-offline-banner button:disabled{opacity:.55;cursor:wait}
+.wordora-offline-banner strong{font-size:13px}
+.wordora-offline-banner .wordora-pending{color:#9c5d20;font-weight:800}
+@media(max-width:630px){.wordora-offline-banner{margin:8px 12px;padding:11px 13px;border-radius:13px;font-size:11px;flex-direction:column;align-items:stretch}.wordora-offline-banner .wordora-offline-actions{justify-content:space-between}.wordora-offline-banner button{flex:1}}

@@ -119,7 +119,7 @@ async function authSubmit(form){
   }else{
    const {data,error}=await client.auth.signInWithPassword({email,password});
    if(error)throw new Error(error.message);
-   state.user=profile(data.user);await loadCore();state.page='dashboard';toast('Xush kelibsiz! O‘rganishni boshlaymiz.','success');
+   state.user=profile(data.user);window.WordoraOffline?.remember(state.user);await loadCore();state.page='dashboard';toast('Xush kelibsiz! O‘rganishni boshlaymiz.','success');
   }
  }catch(e){toast(e.message);}finally{state.busy=false;render();}
 }
@@ -328,7 +328,7 @@ document.addEventListener('click',async e=>{
  }
  else if(action==='logout'){
    cancelAutoNext();const {error}=await client.auth.signOut();if(error){toast(error.message);return;}
-   state.user=null;state.page='dashboard';state.authMode='login';render();
+   window.WordoraOffline?.forget();state.user=null;state.page='dashboard';state.authMode='login';render();
  }
 });
 (async function boot(){
@@ -336,14 +336,17 @@ document.addEventListener('click',async e=>{
  // Recovery events must display the password update form, not the dashboard.
  client.auth.onAuthStateChange((event)=>{
    if(event==='PASSWORD_RECOVERY'){state.authMode='change-password';state.user=null;render();}
-   if(event==='SIGNED_OUT'){state.user=null;state.authMode='login';render();}
+   if(event==='SIGNED_OUT'){window.WordoraOffline?.forget();state.user=null;state.authMode='login';render();}
  });
  try{
   const {data,error}=await client.auth.getUser();
   if(error && error.status!==400)console.warn('Auth:',error.message);
   if(data?.user && state.authMode!=='change-password'){
-    state.user=profile(data.user);await loadCore();
+    state.user=profile(data.user);window.WordoraOffline?.remember(state.user);await loadCore();
+  }else if(!data?.user&&window.WordoraOffline?.isOffline()&&state.authMode!=='change-password'){
+    const cached=window.WordoraOffline.restore();
+    if(cached){state.user=cached;await loadCore();}
   }
- }catch(e){console.warn('Wordora:',e);state.user=null;toast(e.message);}
+ }catch(e){console.warn('Wordora:',e);if(window.WordoraOffline?.isOffline()){const user=window.WordoraOffline.restore();if(user){try{state.user=user;await loadCore();}catch(err){state.user=null;toast(err.message);}}}else{state.user=null;toast(e.message);}}
  render();
 })();
