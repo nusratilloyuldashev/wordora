@@ -21,10 +21,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Bounded live test of public static assets
+      - name: Stage A - 10 users (public assets only)
         env:
           BASE_URL: https://wordora.pages.dev
-          VUS: '5'
+          VUS: '10'
           DURATION_SEC: '20'
-          PAUSE_MS: '1000'
+          PAUSE_MS: '1500'
+        run: node scripts/wordora-smoke-load.mjs
+      - name: Stage B - 30 users (public assets only)
+        env:
+          BASE_URL: https://wordora.pages.dev
+          VUS: '30'
+          DURATION_SEC: '20'
+          PAUSE_MS: '1500'
         run: node scripts/wordora-smoke-load.mjs

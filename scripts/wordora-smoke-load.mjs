@@ -1,7 +1,7 @@
 // Wordora authorized smoke load: public static assets only, NO Supabase/Auth/DB calls.
-// Bounded to <= 5 workers and <= 20 seconds by default. Node.js >= 20.
+// Bounded to <= 30 workers and <= 20 seconds by default. Node.js >= 20.
 const BASE = (process.env.BASE_URL || 'https://wordora.pages.dev').replace(/\/+$/,'');
-const VUS = Math.max(1,Math.min(5,Number(process.env.VUS)||5));
+const VUS = Math.max(1,Math.min(30,Number(process.env.VUS)||5));
 const SECONDS = Math.max(5,Math.min(20,Number(process.env.DURATION_SEC)||20));
 const PAUSE_MS = Math.max(800,Number(process.env.PAUSE_MS)||1000);
 const PATHS = ['/', '/manifest.webmanifest', '/wordora-v7.js', '/wordora-v7.css'];
