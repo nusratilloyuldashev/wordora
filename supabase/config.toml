@@ -1,0 +1,14 @@
+# Wordora local-only Supabase environment for GitHub Actions stress testing.
+# No hosted project is linked; NEVER put production keys in this file.
+project_id = "wordora-ephemeral-load"
+[api]
+enabled = true
+port = 54321
+[db]
+port = 54322
+[auth]
+enabled = true
+site_url = "http://localhost:4173"
+[auth.email]
+enable_signup = true
+enable_confirmations = false
