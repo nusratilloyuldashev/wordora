@@ -8,8 +8,8 @@ test('guided learning requires three passes before user marks a set complete',()
   assert.match(v4,/minRounds:3/);
   assert.match(v4,/completedRounds>=V4\.minRounds/);
   assert.match(v4,/round===1\?'Ko‘ring/);
-  assert.match(v4,/round===2\?'Tarjimasiga/);
-  assert.match(v4,/Eshitib va eslab yozing/);
+  assert.match(v4,/round===2\?'Gapni to‘ldirib yozing/);
+  assert.match(v4,/Faqat eshitib yozing/);
   assert.match(v4,/function v4LessonComplete/);
   assert.match(v4,/if\(!V4\.lesson\?\.finished\|\|V4\.testSaving\)return/);
 });

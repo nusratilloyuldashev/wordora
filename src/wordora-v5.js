@@ -241,4 +241,4 @@ document.addEventListener('click',e=>{
  if(a==='suggestion'){const input=document.getElementById('en');if(input){input.value=button.dataset.word;V5.typeTouched=false;V5.topicTouched=false;v5CheckInput(input.value);input.focus();}}
  if(a==='verify-again'){const input=document.getElementById('en');if(input)v5CheckInput(input.value);}
 },true);
-document.addEventListener('click',e=>{if(e.target.closest('[data-v4="typed-next"],[data-v4="first-next"],[data-v4="leave-lesson"],[data-v4="finish-lesson"]'))clearTimeout(V5.advanceTimer);},true);
+document.addEventListener('click',e=>{if(e.target.closest('[data-v4="typed-next"],[data-v4="first-next"],[data-v4="leave-lesson"],[data-v4="finish-lesson"],[data-v4="repeat"]'))clearTimeout(V5.advanceTimer);},true);

@@ -103,3 +103,10 @@
 @media(prefers-reduced-motion:reduce){.v4-illustration>span,.v4-motion{animation:none}.v4-dashboard-steps button:hover{transform:none}}
 /* Toasts are informational and should never block navigation controls. */
 #toast{pointer-events:none}
+
+/* Wordora 5.1: gap completion and listening are visually distinct. */
+.v4-gap-context{max-width:620px;margin:17px auto 8px;padding:16px 20px;border:1px solid #ddd6ff;border-radius:16px;background:#f8f6ff;color:#363156;text-align:center}
+.v4-gap-context span{display:block;font-size:12px;font-weight:750;color:#77709e;margin-bottom:9px}
+.v4-gap-context p{font-size:18px;font-weight:800;line-height:1.55;margin:0;overflow-wrap:anywhere}
+.v4-focus:has(.v4-secret) .v4-illustration{background:linear-gradient(145deg,#f4f0ff,#eef8ff)}
+@media(max-width:580px){.v4-gap-context{padding:13px}.v4-gap-context p{font-size:15px}}
