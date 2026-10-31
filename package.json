@@ -1,8 +1,8 @@
 {
   "name": "wordora-netlify-supabase",
   "private": true,
-  "version": "5.0.0",
-  "description": "Wordora: static Netlify frontend with Supabase Auth and PostgreSQL",
+  "version": "7.3.0",
+  "description": "Wordora: Cloudflare Pages PWA frontend with Supabase Auth and PostgreSQL",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:preview": "node scripts/build.mjs --preview",

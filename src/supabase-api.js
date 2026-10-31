@@ -93,9 +93,26 @@
     }
     if (path === '/reviews' && options.method === 'POST') {
       const review = JSON.parse(options.body || '{}');
-      return unwrap(await client.rpc('wordora_review', {
-        p_word_id: Number(review.word_id), p_mode: review.mode, p_quality: Number(review.quality),
-      }));
+      const fields={
+        p_word_id:Number(review.word_id),p_mode:review.mode,
+        p_quality:Number(review.quality)
+      };
+      if (review.request_id) {
+        const result=await client.rpc('wordora_review_v2',{
+          ...fields,p_request_id:review.request_id
+        });
+        if (!result.error) {
+          window.WordoraBackend.reviewProtocol='idempotent-v2';
+          return result.data;
+        }
+        // Backwards-compatible rollout: older Supabase projects do not yet have
+        // upgrade_7_3.sql. On this one specific schema-cache error, use the old RPC.
+        // This fallback does NOT protect against ambiguous network retries.
+        if (result.error.code!=='PGRST202'&&result.error.code!=='42883')
+          return unwrap(result);
+        window.WordoraBackend.reviewProtocol='legacy-migration-required';
+      }
+      return unwrap(await client.rpc('wordora_review',fields));
     }
     if (path === '/words' && options.method === 'POST') {
       const user = await needUser();
@@ -140,5 +157,6 @@
     }
     throw new Error('Noma’lum API amali: ' + path);
   }
-  window.WordoraBackend = { api, client, configError, profile, taxonomyReady: true };
+  window.WordoraBackend = { api, client, configError, profile, taxonomyReady: true,
+    reviewProtocol:'unknown' };
 })();

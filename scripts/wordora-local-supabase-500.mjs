@@ -142,10 +142,23 @@ try{
         user_id:person.id,word_id,stage:'learning'
       })),{onConflict:'user_id,word_id',ignoreDuplicates:true}));
     for(const [j,mode] of ['cards','choice','write'].entries()){
-     const result=await op('review_rpc',()=>api.rpc('wordora_review',{
-       p_word_id:five[j],p_mode:mode,p_quality:5
-     }));
-     if(result?.ok!==true)throw Error('Practice RPC did not save');
+     const requestId=randomUUID();
+     const payload={
+       p_word_id:five[j],p_mode:mode,p_quality:5,p_request_id:requestId
+     };
+     const result=await op('review_rpc_v2',()=>api.rpc('wordora_review_v2',payload));
+     if(result?.ok!==true||result.deduplicated!==false)throw Error('Practice RPC did not save');
+     // Retrying an identical request after an uncertain ACK must be a no-op.
+     if(j===0){
+      const duplicate=await op('review_rpc_retry',()=>api.rpc('wordora_review_v2',payload));
+      if(duplicate?.ok!==true||duplicate.deduplicated!==true)
+       throw Error('Duplicate review request was not deduplicated');
+      if(i===0){
+       const changed=await api.rpc('wordora_review_v2',{...payload,p_quality:2});
+       if(!changed.error||changed.error.code!=='22023')
+        throw Error('Reused request ID with different payload was not rejected');
+      }
+     }
     }
 
     const exam=await op('exam_95_write',()=>api.from('word_learning')

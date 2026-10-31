@@ -138,7 +138,7 @@ function offlineIndicator(){
  const off=OF.isOffline();
  return `<div class="wordora-offline-banner ${off?'offline':info.ready?'ready':'online'}" role="status">
   <span>${off?'📴 Offline rejim':info.ready?'✅ Offline uchun tayyor':'📥 Offline ma’lumot yuklanmoqda'}</span>
-  <span>${info.pending?`${info.pending} ta yuborilmagan natija`:'So‘zlar qurilmada saqlanadi'}</span>
+  <span>${window.WordoraBackend.reviewProtocol==='legacy-migration-required'?'⚠️ Natijalarni takror hisoblamaslik uchun Supabase upgrade_7_3.sql kerak':info.pending?`${info.pending} ta yuborilmagan natija`:'So‘zlar qurilmada saqlanadi'}</span>
   <div class="wordora-offline-actions">${off?'':`<button data-offline="prepare">⬇️ Offline uchun yuklash</button>${info.pending?'<button data-offline="sync">🔄 Sinxronlash</button>':''}`}<button data-offline="install">📲 Telefonga o‘rnatish</button><button data-offline="help" aria-label="Offline yordam">ⓘ</button></div>
  </div>`;
 }

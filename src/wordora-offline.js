@@ -7,6 +7,17 @@
  const online=()=>navigator.onLine!==false;
  const isOffline=()=>!online()||networkFailed;
  const networkError=e=>!online()||/failed to fetch|networkerror|network request|fetch failed|network is offline|err_network|connection refused|load failed|aborterror|network connection|timeout/i.test(String(e?.message||e||''));
+ // Every review is assigned one stable UUID BEFORE a network request is sent.
+ function newRequestId(){
+  const secure=window.crypto||self.crypto;
+  if(secure?.randomUUID)return secure.randomUUID();
+  if(!secure?.getRandomValues)throw Error('Brauzer xavfsiz UUID yaratishni qo‘llab-quvvatlamaydi.');
+  const bytes=new Uint8Array(16);secure.getRandomValues(bytes);
+  bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+  const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+  return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+ }
+ const isUUID=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
  const openDB=()=>new Promise((resolve,reject)=>{
   if(!('indexedDB' in window))return reject(Error('IndexedDB mavjud emas.'));
   const r=indexedDB.open(DB,1);
@@ -46,8 +57,9 @@
  }
  async function enqueue(type,payload){
   if(!account())throw Error('Offline amal uchun avval hisobga kirilgan bo‘lishi kerak.');
-  const id=(self.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  const record={id,userId:account(),type,payload,at:Date.now()};
+  const id=newRequestId();
+  const data=type==='review'?{...payload,request_id:id}:payload;
+  const record={id,userId:account(),type,payload:data,at:Date.now()};
   await operation('outbox','put',record);
   notify();
   return record;
@@ -82,8 +94,15 @@
     try{
      let response;
      if(item.type==='review'){
-      response=await backend.client.rpc('wordora_review',{
-       p_word_id:Number(item.payload.word_id),p_mode:item.payload.mode,p_quality:Number(item.payload.quality)});
+      // Upgrade a previously queued pre-v7.3 review safely: persist the UUID
+      // before sending, so even a tab crash or lost ACK cannot rotate it.
+      if(!isUUID(item.payload?.request_id)){
+       item.payload={...item.payload,request_id:newRequestId()};
+       await operation('outbox','put',item);
+      }
+      response={data:await originalApi('/reviews',{
+       method:'POST',body:JSON.stringify(item.payload)
+      }),error:null};
      }else if(item.type==='learning-insert'){
       response=await backend.client.from('word_learning').upsert(item.payload,{onConflict:'user_id,word_id',ignoreDuplicates:true});
      }else if(item.type==='learning-update'){
@@ -95,7 +114,7 @@
      if(response.error)throw response.error;
      await operation('outbox','delete',item.id);
      done++;
-    }catch(e){console.warn('Offline sync failed:',e);break;}
+    }catch(e){if(networkError(e))noteFailure(e);console.warn('Offline sync failed:',e);break;}
    }
    if(done)networkFailed=false;
    return {synced:done,remaining:(await pending()).length};
@@ -125,8 +144,24 @@
  backend.api=async function(path,opts={}){
   const method=opts.method||'GET';
   const snapshot=path.startsWith('/words?')||path==='/words'&&method==='GET'?'words':path==='/stats'?'stats':null;
-  if(method==='POST'&&path==='/reviews'&&!online()){
-   await enqueue('review',JSON.parse(opts.body||'{}'));return {offline:true,queued:true};
+  if(method==='POST'&&path==='/reviews'){
+   // Write-ahead outbox: an uncertain server acknowledgement cannot lose the
+   // answer. Replays use the SAME request_id and become exactly-once after
+   // Supabase upgrade_7_3.sql is installed.
+   const record=await enqueue('review',JSON.parse(opts.body||'{}'));
+   if(!online())return {offline:true,queued:true};
+   try{
+    const value=await originalApi(path,{
+     ...opts,body:JSON.stringify(record.payload)
+    });
+    await operation('outbox','delete',record.id);
+    notify();
+    networkFailed=false;
+    return value;
+   }catch(e){
+    if(networkError(e)){noteFailure(e);return {offline:true,queued:true};}
+    throw e; // Keep the pending item, never drop an unconfirmed result.
+   }
   }
   if(method!=='GET'&&!online())throw Error('Bu amal internet talab qiladi. Offline rejimda yodlash, mashqlar va test ishlaydi.');
   if(snapshot&&!online()){
@@ -141,9 +176,6 @@
   }catch(e){
    if(networkError(e)){
     noteFailure(e);
-    if(method==='POST'&&path==='/reviews'){
-     await enqueue('review',JSON.parse(opts.body||'{}'));return {offline:true,queued:true};
-    }
     if(snapshot){const data=await read(snapshot);if(data!==null)return data;}
    }
    throw e;

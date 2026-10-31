@@ -67,6 +67,18 @@ const perfApi={
  currentUser:()=>V7.userId
 };
 window.WordoraV7=perfApi;
+// Local diagnostics only: no personal data or telemetry sent to a third party.
+window.WordoraDiagnostics={
+ async status(){
+  const queued=await window.WordoraOffline?.pending?.().catch(()=>[]);
+  return {
+   version:'7.3',reviewProtocol:window.WordoraBackend?.reviewProtocol||'unknown',
+   pendingOperations:Array.isArray(queued)?queued.length:0,
+   offline:window.WordoraOffline?.isOffline?.()||false,
+   ...perfApi.metrics()
+  };
+ }
+};
 // Refreshing a predownloaded offline package must NOT return a stale in-memory snapshot.
 if(window.WordoraOffline){
  window.WordoraOffline.refreshData=async()=>{v7Invalidate('offline-download');await loadCore({force:true});};
