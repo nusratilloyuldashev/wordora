@@ -30,7 +30,7 @@ v5Load=async function(){
  if(OF.isOffline()){
   const cached=await OF.read('collections');
   if(cached){
-   V5.account=state.user.id;V5.collections=cached.collections||[];V5.items=cached.items||[];
+   V5.account=state.user.id;V5.collections=cached.collections||[];V5.items=cached.items||[];v5ReindexItems();
    V5.ready=true;V5.warning='';V5.loading=false;return;
   }
   V5.ready=false;V5.warning='Unitlar offline yuklanmagan.';return;
@@ -41,7 +41,7 @@ v5Load=async function(){
  }else if(OF.networkError(V5.warning||'')){
   OF.noteFailure(V5.warning);
   const cached=await OF.read('collections');
-  if(cached){V5.collections=cached.collections||[];V5.items=cached.items||[];V5.ready=true;V5.warning='';}
+  if(cached){V5.collections=cached.collections||[];V5.items=cached.items||[];v5ReindexItems();V5.ready=true;V5.warning='';}
  }
 };
 async function v7SaveLearningCache(){

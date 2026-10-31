@@ -1,6 +1,6 @@
 /* Wordora PWA service worker. App shell only; NEVER cache Supabase requests. */
 'use strict';
-const VERSION='wordora-pwa-7.0.1';
+const VERSION='wordora-pwa-7.1.0';
 const SHELL=VERSION+'-shell';
 const CDN='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.2';
 const ASSETS=[

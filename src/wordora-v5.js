@@ -7,25 +7,38 @@ const V5={ready:false,loading:false,account:null,collections:[],items:[],
   manageWord:null,adding:false,collectionBusy:false,lookupSerial:0,lookup:null,
   lookupTimer:null,lookupCache:new Map(),topicTouched:false,typeTouched:false,
   autoAdvance:localStorage.getItem('wordora-v5-auto-advance')!=='false',advanceTimer:null,
-  warning:''};
+  warning:'',itemIndex:{byWord:new Map(),byCollection:new Map()}};
 const v5Name = id => V5.collections.find(x=>Number(x.id)===Number(id))?.name || '';
-const v5Membership=(wordId,id)=>V5.items.some(x=>Number(x.word_id)===Number(wordId)&&Number(x.collection_id)===Number(id));
+function v5ReindexItems(){
+ // Per-account, transient index only. It is rebuilt after online/offline collection loads.
+ const byWord=new Map(),byCollection=new Map();
+ for(const item of V5.items){
+  const wordId=String(item.word_id),collectionId=String(item.collection_id);
+  if(!byWord.has(wordId))byWord.set(wordId,new Set());
+  if(!byCollection.has(collectionId))byCollection.set(collectionId,new Set());
+  byWord.get(wordId).add(collectionId);
+  byCollection.get(collectionId).add(wordId);
+ }
+ V5.itemIndex={byWord,byCollection};
+}
+const v5Membership=(wordId,id)=>V5.itemIndex.byWord.get(String(wordId))?.has(String(id))||false;
 const v5Include=(word,id)=>id==='all'||v5Membership(word.id,id);
-const v5Count=id=>V5.items.filter(x=>Number(x.collection_id)===Number(id)).length;
+const v5Count=id=>V5.itemIndex.byCollection.get(String(id))?.size||0;
+const v5WordCollectionIds=wordId=>V5.itemIndex.byWord.get(String(wordId))||new Set();
 const v5ColOptions=(selected,allLabel='Barcha to‘plamlar')=>`<option value="all" ${selected==='all'?'selected':''}>${esc(allLabel)}</option>${V5.collections.map(x=>`<option value="${x.id}" ${String(selected)===String(x.id)?'selected':''}>${esc(x.name)} (${v5Count(x.id)})</option>`).join('')}`;
 const v5NoColOptions=()=>`<option value="">To‘plamsiz — umumiy lug‘at</option>${V5.collections.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}<option value="new">＋ Yangi to‘plam yaratish...</option>`;
 function v5Error(result){if(!result.error)return result.data;throw Error(result.error.code==='23505'?'Bu nom yoki bog‘lanish avval saqlangan.':result.error.message||'Ma’lumotlar bazasida xatolik.');}
 async function v5User(){const r=await client.auth.getUser();if(r.error||!r.data?.user)throw Error('Qayta kirishingiz kerak.');return r.data.user;}
 async function v5Load(){
  if(!state.user||!client)return;
- if(V5.account!==state.user.id){V5.collections=[];V5.items=[];V5.account=state.user.id;V5.manageWord=null;V5.libraryCollection='all';V5.learnCollection='all';V5.practiceCollection='all';V5.examCollection='all';}
+ if(V5.account!==state.user.id){V5.collections=[];V5.items=[];v5ReindexItems();V5.account=state.user.id;V5.manageWord=null;V5.libraryCollection='all';V5.learnCollection='all';V5.practiceCollection='all';V5.examCollection='all';}
  V5.loading=true;
  try{
   const a=await client.from('word_collections').select('id,name,created_at').eq('user_id',state.user.id).order('created_at',{ascending:true});
   if(a.error)throw a.error;
   const items=[];
   for(let n=0;n<6000;n+=1000){const r=await client.from('word_collection_items').select('collection_id,word_id').eq('user_id',state.user.id).range(n,n+999);if(r.error)throw r.error;items.push(...(r.data||[]));if((r.data||[]).length<1000)break;}
-  V5.collections=a.data||[];V5.items=items;V5.ready=true;V5.warning='';
+  V5.collections=a.data||[];V5.items=items;v5ReindexItems();V5.ready=true;V5.warning='';
  }catch(e){V5.ready=false;V5.warning=e.message||'To‘plamlarni yuklab bo‘lmadi.';}
  finally{V5.loading=false;}
 }
@@ -126,7 +139,7 @@ libraryPage=function(){
  html=html.replace(/<tr><td><button class="word-pronounce"[\s\S]*?<\/td><\/tr>/g,row=>{
   const id=Number(row.match(/data-word-id="(\d+)"/)?.[1]);
   if(!id)return row;
-  const tags=V5.items.filter(x=>Number(x.word_id)===id).map(x=>v5Name(x.collection_id)).filter(Boolean);
+  const tags=Array.from(v5WordCollectionIds(id),x=>v5Name(x)).filter(Boolean);
   const more=`<div class="v5-unit-badges">${tags.slice(0,2).map(s=>`<span>${esc(s)}</span>`).join('')}${tags.length>2?`<span>+${tags.length-2}</span>`:''}</div><button class="v5-row-assign" data-v5="assign-word" data-id="${id}" aria-label="So‘zni to‘plamga biriktirish">＋ Unit</button>`;
   return row.replace(/<\/td><\/tr>$/,more+'</td></tr>');
  });

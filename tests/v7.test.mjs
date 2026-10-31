@@ -83,7 +83,7 @@ test('all write paths invalidate their cached account snapshot',()=>{
 });
 test('PWA pre-caches the latest JS and CSS, and keeps old word-learning mastery',()=>{
  const html=read('src/index.html'),worker=read('src/service-worker.js'),v4=read('src/wordora-v4.js');
- assert.match(worker,/wordora-pwa-7\.0\.1/);
+ assert.match(worker,/wordora-pwa-7\.1\.0/);
  assert.match(worker,/wordora-v7\.js/);
  assert.match(worker,/wordora-v7\.css/);
  assert.match(html,/wordora-v7\.js/);
@@ -110,4 +110,42 @@ test('real library renderer paginates both above and below, preserving counts',(
   assert.ok(html.includes(range+' / 123 ta so‘z'));
  }
  state.libraryPage=99;ctx.libraryPage();assert.equal(state.libraryPage,2);
+});
+
+test('Unit membership index is consistent, deduplicated and rebuilt after user switch',()=>{
+ const source=read('src/wordora-v5.js');
+ const start=source.indexOf('function v5ReindexItems()');
+ const end=source.indexOf('const v5ColOptions=',start);
+ assert.ok(start>=0&&end>start,'v5 indexing helpers must be present');
+ const snippet=source.slice(start,end);
+ const V5={items:[],itemIndex:{byWord:new Map(),byCollection:new Map()}};
+ const sandbox={V5,Map,Set,String,Number};
+ vm.createContext(sandbox);
+ vm.runInContext(snippet.replaceAll(/^const (v5Membership|v5Include|v5Count|v5WordCollectionIds)/gm,'var $1'),sandbox);
+ V5.items=[{word_id:10,collection_id:20},{word_id:10,collection_id:30},
+           {word_id:11,collection_id:30},{word_id:10,collection_id:20}];
+ sandbox.v5ReindexItems();
+ assert.equal(sandbox.v5Membership(10,20),true);
+ assert.equal(sandbox.v5Membership(10,99),false);
+ assert.equal(sandbox.v5Include({id:10},'all'),true);
+ assert.equal(sandbox.v5Include({id:11},20),false);
+ assert.equal(sandbox.v5Count(20),1);
+ assert.equal(sandbox.v5Count(30),2);
+ assert.deepEqual([...sandbox.v5WordCollectionIds(10)].sort(),['20','30']);
+ V5.items=[{word_id:40,collection_id:70}];
+ sandbox.v5ReindexItems();
+ assert.equal(sandbox.v5Membership(10,20),false);
+ assert.equal(sandbox.v5Membership(40,70),true);
+ assert.equal(sandbox.v5Count(20),0);
+});
+test('offline Unit snapshot rebuilds the fast index before rendering',()=>{
+ const offline=read('src/wordora-offline-bridge.js');
+ assert.match(offline,/V5\.items=cached\.items\|\|\[\];v5ReindexItems\(\)/);
+});
+test('7.1 avoids blind production DDL and ships read-only database diagnostics',()=>{
+ const diagnostic=read('supabase/performance_7_1_diagnostics.sql');
+ const commands=diagnostic.split('\n').map(line=>line.replace(/--.*$/,'').trim()).filter(Boolean);
+ assert.ok(commands.filter(x=>/^select\b/i.test(x)).length>=4);
+ assert.ok(!commands.some(x=>/^(insert|update|delete|drop|alter|create|truncate|grant|revoke)\b/i.test(x)));
+ assert.match(read('src/wordora-v4.js'),/v7-version">v7\.1/);
 });
