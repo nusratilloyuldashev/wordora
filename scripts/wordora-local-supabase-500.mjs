@@ -131,7 +131,7 @@ try{
       user_id:person.id,collection_id:unit.id,word_id
     }));
     await op('unit_assign_20',()=>api.from('word_collection_items')
-      .upsert(links,{onConflict:'user_id,collection_id,word_id'}));
+      .upsert(links,{onConflict:'user_id,collection_id,word_id',ignoreDuplicates:true}));
     const loaded=await op('unit_read',()=>api.from('word_collection_items')
       .select('word_id').eq('user_id',person.id).eq('collection_id',unit.id));
     if(loaded.length!==20)throw Error('Unit membership count not 20');
