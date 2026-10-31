@@ -4,12 +4,12 @@ import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const v4=read('src/wordora-v4.js');
 const sql=read('supabase/upgrade_4_0.sql');
-test('guided learning requires three passes before user marks a set complete',()=>{
+test('legacy V4 guided learning remains available for a saved pre-upgrade session',()=>{
   assert.match(v4,/minRounds:3/);
   assert.match(v4,/L\.chunkStart=end/);
   assert.match(v4,/round===1\?'Ko‘ring/);
-  assert.match(v4,/round===2\?'Gapni to‘ldirib yozing/);
-  assert.match(v4,/Faqat eshitib yozing/);
+  assert.match(v4,/round===2\?'So‘zni tanib oling/);
+  assert.match(v4,/Eshitib yozing/);
   assert.match(v4,/function v4LessonComplete/);
   assert.match(v4,/if\(!V4\.lesson\?\.finished\|\|V4\.testSaving\)return/);
 });
