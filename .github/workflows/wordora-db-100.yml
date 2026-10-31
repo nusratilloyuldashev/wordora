@@ -1,0 +1,67 @@
+name: Wordora 100 concurrent isolated DB learners
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wordora-db-100.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wordora-db-100-test
+  cancel-in-progress: false
+jobs:
+  isolated-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: wordora-local-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout Wordora (read only)
+        uses: actions/checkout@v4
+      - name: Prepare Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Create isolated Supabase auth emulation
+        env:
+          PGPASSWORD: wordora-local-only
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres <<'SQL'
+          create schema if not exists auth;
+          create table auth.users (id uuid primary key, email text unique);
+          create role anon nologin;
+          create role authenticated nologin;
+          create or replace function auth.uid() returns uuid
+            language sql stable
+            as $function$
+              select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
+            $function$;
+          grant usage on schema public, auth to authenticated, anon;
+          grant execute on function auth.uid() to authenticated;
+          SQL
+      - name: Apply the real Wordora SQL migrations
+        env:
+          PGPASSWORD: wordora-local-only
+        run: |
+          for file in supabase/setup.sql supabase/upgrade_3_0.sql supabase/upgrade_4_0.sql supabase/upgrade_5_0.sql; do
+            echo "Applying $file"
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres -f "$file" > /dev/null
+          done
+      - name: Install PostgreSQL test client (test job only)
+        run: npm install --no-save --no-package-lock pg@8.14.1
+      - name: Run 100 simultaneous simulated learner SQL flows
+        env:
+          TEST_PG_HOST: '127.0.0.1'
+          TEST_PG_PASSWORD: wordora-local-only
+        run: node scripts/wordora-db-100-vus.mjs

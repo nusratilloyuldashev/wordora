@@ -35,3 +35,10 @@ jobs:
           DURATION_SEC: '20'
           PAUSE_MS: '1500'
         run: node scripts/wordora-smoke-load.mjs
+      - name: Stage C - 100 users (public assets only)
+        env:
+          BASE_URL: https://wordora.pages.dev
+          VUS: '100'
+          DURATION_SEC: '20'
+          PAUSE_MS: '2500'
+        run: node scripts/wordora-smoke-load.mjs
