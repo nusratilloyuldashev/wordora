@@ -6,7 +6,7 @@ const v4=read('src/wordora-v4.js');
 const sql=read('supabase/upgrade_4_0.sql');
 test('guided learning requires three passes before user marks a set complete',()=>{
   assert.match(v4,/minRounds:3/);
-  assert.match(v4,/completedRounds>=V4\.minRounds/);
+  assert.match(v4,/L\.chunkStart=end/);
   assert.match(v4,/round===1\?'Ko‘ring/);
   assert.match(v4,/round===2\?'Gapni to‘ldirib yozing/);
   assert.match(v4,/Faqat eshitib yozing/);
@@ -44,4 +44,18 @@ test('test and practice separated by navigation and date groups',()=>{
   assert.match(v4,/function v4Groups/);
   assert.match(v4,/v4DateSelect\('practice'\)/);
   assert.match(v4,/v4DateSelect\('test'\)/);
+});
+test('a 20 word drill is not clipped by the dashboard ten-word default',()=>{
+ assert.match(v4,/practiceLimit:'all'/);
+ assert.match(v4,/V4\.practiceLimit==='all'\?eligible\.length/);
+ assert.match(v4,/v4-drill-size/);
+ assert.doesNotMatch(v4,/\.slice\(0,Math\.max\(1,state\.sessionLimit\)\)/);
+});
+test('low-pressure learning uses five-word groups, recognition, and optional hints',()=>{
+ assert.match(v4,/chunkSize:5/);
+ assert.match(v4,/L\.chunkStart=end/);
+ assert.match(v4,/data-v4="recognize"/);
+ assert.match(v4,/data-v4="hint"/);
+ assert.match(v4,/data-v4="guided-next"/);
+ assert.match(v4,/v4RestartLesson/);
 });

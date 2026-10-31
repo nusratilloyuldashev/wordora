@@ -110,3 +110,16 @@
 .v4-gap-context p{font-size:18px;font-weight:800;line-height:1.55;margin:0;overflow-wrap:anywhere}
 .v4-focus:has(.v4-secret) .v4-illustration{background:linear-gradient(145deg,#f4f0ff,#eef8ff)}
 @media(max-width:580px){.v4-gap-context{padding:13px}.v4-gap-context p{font-size:15px}}
+/* Wordora 5.2: practice count and low-pressure five-word learning groups */
+.v4-drill-limit{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:14px 0 20px;padding:14px 18px;border:1px solid #e6e1fa;border-radius:15px;background:#fff}
+.v4-drill-limit label{display:flex;align-items:center;flex-wrap:wrap;gap:12px;color:#4c4279;font-size:13px;font-weight:800}
+.v4-drill-limit select{background:#f9f7ff;border:1px solid #dcd4fa;border-radius:10px;padding:10px 12px;color:#604bc9;font:inherit;min-height:42px}
+.v4-drill-limit p{margin:0;color:#77739a;font-size:12px}
+.v4-lesson-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:680px;margin:18px auto}
+.v4-lesson-option{background:#fff;border:1.5px solid #dfdaf5;border-radius:14px;min-height:58px;text-align:left;padding:14px 20px;font:inherit;font-weight:850;color:#42365f;cursor:pointer}
+.v4-lesson-option:hover,.v4-lesson-option:focus-visible{background:#f1edff;border-color:#8c77ec}
+.v4-hint-panel{display:flex;align-items:center;justify-content:center;gap:11px;flex-wrap:wrap;margin:16px auto}
+.v4-hint-panel p{width:100%;color:#5b4c98;text-align:center;margin:0;font-size:14px}
+.v4-hint-btn{border:1px solid #e0daf7;border-radius:12px;background:#f4f1ff;color:#6651c7;padding:10px 14px;cursor:pointer;font-weight:800}
+.v4-hint-btn:disabled{opacity:.6;cursor:default}
+@media(max-width:560px){.v4-lesson-options{grid-template-columns:1fr}.v4-lesson-option{min-height:48px}.v4-drill-limit label,.v4-drill-limit select{width:100%}}

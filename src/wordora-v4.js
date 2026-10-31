@@ -7,7 +7,8 @@ const V4 = {
   threshold: 90, minRounds:3, maxLessonWords:40,
   memory:{}, ready:false, loading:false, unavailable:false,
   lesson:null, exam:null, examDate:'', practiceDate:'all',
-  count:20, topic:'all', wordType:'all', lessonReview:false,
+  count:5, topic:'all', wordType:'all', lessonReview:false,
+  chunkSize:5, practiceLimit:'all',
   testSaving:false, reviewSaving:false,reviewOnly:false,
   activeAccount:null, announce:'',
 };
@@ -93,10 +94,10 @@ const v4Matches=w=>(V4.topic==='all'||v3WordTopic(w)===V4.topic)&&(V4.wordType==
 function v4LessonPage(){
   const newWords=v4Words().filter(w=>!v4Introduced(w)&&v4Matches(w));
   const resume=V4.lesson?.ids?.length;
-  return `<section class="v4-page"><div class="overline">1-BOSQICH · TANISHISH</div><h1>So‘zlarni eslab qolish 🧠</h1><p>Baholash shart emas. Ko‘rasiz, talaffuzini eshitasiz va o‘zingiz yozasiz. Har bir so‘z kamida 3 marta uchraydi.</p>${v4Warning()}
+  return `<section class="v4-page"><div class="overline">1-BOSQICH · TANISHISH</div><h1>So‘zlarni eslab qolish 🧠</h1><p>Baholash shart emas. Ko‘rasiz, talaffuzini eshitasiz va o‘zingiz yozasiz. Har 5 ta so‘z kichik guruh bo‘lib o‘rganiladi. Har bir so‘z uch xil usulda qaytariladi.</p>${v4Warning()}
   ${resume?`<div class="v4-resume"><strong>📌 Tugallanmagan yodlash bor</strong><p>${V4.lesson.ids.length} ta so‘z · ${V4.lesson.round}-aylanish · ${V4.lesson.index+1}-so‘z</p><button class="btn btn-primary" data-v4="resume">Qolgan joydan davom etish →</button><button class="btn btn-secondary" data-v4="discard">Eski mashg‘ulotni bekor qilish</button></div>`:''}
-  <div class="v4-three"><div>👀 <strong>1. Ko‘ring</strong><small>Ma’no, obraz va talaffuz</small></div><div>✍️ <strong>2. Yozing</strong><small>Misol gapning bo‘sh joyini to‘ldiring</small></div><div>🎧 <strong>3. Eshitib yozing</strong><small>So‘zni mustaqil eslang</small></div></div>
-  <div class="panel v4-setup-panel"><div class="panel-title"><div><h3>Bugun nechta so‘z yodlaysiz?</h3><p>1–40 ta tanlashingiz mumkin. Tavsiya: 10–20 ta.</p></div><span class="v4-count-badge">${newWords.length} ta yangi so‘z</span></div>
+  <div class="v4-three"><div>👀 <strong>1. Ko‘ring</strong><small>Ma’no, obraz va talaffuz</small></div><div>🧩 <strong>2. Tanlang</strong><small>So‘zni tanib, ma’noga bog‘lang</small></div><div>🎧 <strong>3. Eshitib yozing</strong><small>So‘zni mustaqil eslang</small></div></div>
+  <div class="panel v4-setup-panel"><div class="panel-title"><div><h3>Bugun nechta so‘z yodlaysiz?</h3><p>1–40 ta tanlashingiz mumkin. Tavsiya: 5–10 ta. 20 ta tanlasangiz ham 5 talik guruhlarga bo‘linadi.</p></div><span class="v4-count-badge">${newWords.length} ta yangi so‘z</span></div>
   ${v4Inputs()}
   <button class="btn btn-primary" data-v4="begin" ${!V4.ready||newWords.length===0?'disabled':''}>🌱 Yangi so‘zlarni yodlash</button>
   ${newWords.length===0?'<p class="v4-muted">Bu filtrda yangi so‘z qolmagan. Boshqa mavzu tanlang yoki lug‘atga yangi so‘z qo‘shing.</p>':''}
@@ -109,7 +110,7 @@ function v4Begin(){
   if(V4.lesson?.ids?.length && !V4.lesson.finished){toast('Avval davom etayotgan mashg‘ulotni tugating yoki bekor qiling.');return;}
   const choices=shuffle(v4Words().filter(w=>!v4Introduced(w)&&v4Matches(w))).slice(0,Math.min(V4.maxLessonWords,Math.max(1,V4.count)));
   if(!choices.length){toast('Tanlangan mavzuda yangi so‘z yo‘q.');return;}
-  V4.lesson={ids:choices.map(w=>w.id),round:1,index:0,phase:'see',checked:false,tries:0,completedRounds:0,errors:0,finished:false,started:v4Today()};
+  V4.lesson={ids:choices.map(w=>w.id),round:1,index:0,chunkStart:0,chunkSize:V4.chunkSize,phase:'see',checked:false,tries:0,hint:0,weakIds:[],completedRounds:0,errors:0,finished:false,started:v4Today()};
   v4SaveLesson();state.page='v4-lesson';render();v4Pronounce();
 }
 function v4Pronounce(){const w=v4LessonWord();if(w)say(w.en);}
@@ -134,42 +135,57 @@ function v4ExampleGap(word){
 function v4RestartLesson(){
  const L=V4.lesson;
  if(!L||!L.finished)return;
- Object.assign(L,{round:1,index:0,phase:'see',checked:false,tries:0,completedRounds:0,errors:0,finished:false});
+ Object.assign(L,{round:1,index:0,chunkStart:0,phase:'see',checked:false,tries:0,hint:0,weakIds:[],completedRounds:0,errors:0,finished:false});
  v4SaveLesson();render();v4Pronounce();
+}
+function v4RecognitionChoices(L,w){
+ if(L.choiceWord===w.id&&L.choices?.length)return L.choices;
+ const other=shuffle(v4Words().filter(x=>x.id!==w.id&&normalize(x.en)!==normalize(w.en))).slice(0,3).map(x=>x.en);
+ L.choiceWord=w.id;L.choices=shuffle([w.en,...other]);v4SaveLesson();return L.choices;
 }
 function v4LessonScreen(){
  const lesson=V4.lesson,w=v4LessonWord();
  if(!lesson||!w)return `<section class="v4-page"><p>Yodlash jarayoni topilmadi.</p><button class="btn" data-v4="leave-lesson">So‘z yodlashga qaytish</button></section>`;
  if(lesson.finished)return v4LessonComplete();
  const round=lesson.round,scene=v4Scene(w),whole=lesson.ids.length;
+ const chunk=lesson.chunkSize||whole,begin=lesson.chunkStart||0,chunkTotal=Math.min(whole-begin,chunk);
+ const groupNumber=Math.floor(begin/chunk)+1,groupCount=Math.ceil(whole/chunk);
  const visual=round===1||lesson.phase==='wrong'||lesson.phase==='checked';
  const exampleGap=round===2?v4ExampleGap(w):'';
  const listening=round===3&&!visual;
- const roundTitle=round===1?'Ko‘ring va eshiting 👀':round===2?'Gapni to‘ldirib yozing ✍️':'Faqat eshitib yozing 🎧';
+ const roundTitle=round===1?'Ko‘ring va eshiting 👀':round===2?'So‘zni tanib oling 🧩':'Eshitib yozing 🎧';
  return `<section class="v4-page v4-focus"><div class="v4-lesson-top"><button class="v4-back" data-v4="leave-lesson">← Saqlab chiqish</button><span class="v4-round">${round}/3-aylanish</span></div>
  <h1>${roundTitle}</h1>
- <div class="v4-meter-label"><span>${lesson.index+1} / ${whole} so‘z</span><span>Jami ${lesson.completedRounds} ta aylanish tugagan</span></div><div class="v4-meter"><i style="width:${Math.round(100*(lesson.index+1)/whole)}%"></i></div>
+ <div class="v4-meter-label"><span>${groupNumber} / ${groupCount}-guruh · ${lesson.index-begin+1} / ${chunkTotal} so‘z</span><span>Jami ${whole} ta so‘z</span></div><div class="v4-meter"><i style="width:${Math.round(100*(lesson.index-begin+1)/chunkTotal)}%"></i></div>
  <div class="v4-learning-card"><div class="v4-illustration" aria-hidden="true"><span>${listening?'🎧':scene.emoji}</span><span class="v4-motion">✦</span></div><div class="v4-association">${listening?'Tinglang, so‘zni eslab yozing':esc(scene.hint)}</div>
  ${visual?`<div class="v4-english">${esc(w.en)}</div><div class="v4-uzbek">${esc(w.uz)}</div>`:
- round===2?`<div class="v4-uzbek v4-big-meaning">${esc(w.uz)}</div>${exampleGap?`<div class="v4-gap-context"><span>Gapdagi bo‘sh joyga mos so‘zni yozing</span><p>${esc(exampleGap)}</p></div>`:`<div class="v4-gap-context"><span>So‘zni tarjimasidan topib yozing</span><p>Birinchi harf: ${esc(String(w.en).trim().charAt(0).toUpperCase())} · ${String(w.en).replace(/\s/g,'').length} ta belgi</p></div>`}`:
+ round===2?`<div class="v4-uzbek v4-big-meaning">${esc(w.uz)}</div>${exampleGap?`<div class="v4-gap-context"><span>Qaysi so‘z gapga mos?</span><p>${esc(exampleGap)}</p></div>`:''}`:
  `<div class="v4-secret">🔒 So‘z ham, tarjima ham yashirilgan</div><small class="v4-muted">Talaffuzni eshiting va hech qanday yozma yordamsiz kiriting.</small>`}
  <button class="v4-speaker" data-v4="sound" aria-label="Talaffuzini tinglash">🔊 <span>${round===3?'So‘zni eshitish / qayta eshitish':'Talaffuzini tinglash'}</span></button>
  ${visual&&w.example_en?`<p class="v4-example">${esc(w.example_en)} ${esc(w.example_uz)}</p>`:''}
  </div>
  ${round===1?`<div class="v4-action-row"><button class="btn btn-primary" data-v4="first-next">Ko‘rdim va eshitdim →</button></div>`:
- lesson.phase==='wrong'?`<div class="v4-incorrect"><b>Yana bir urinib ko‘ring.</b> To‘g‘risi: <strong>${esc(w.en)}</strong>. Talaffuzini eshiting va qayta yozing.</div><button class="btn btn-primary" data-v4="retry">Qayta yozish</button>`:
+ lesson.phase==='wrong'?`<div class="v4-incorrect"><b>Hechqisi yo‘q, mashq qilyapsiz.</b> To‘g‘ri javob: <strong>${esc(w.en)}</strong>. Uni bir marta ovoz chiqarib takrorlang.</div><div class="v4-action-row"><button class="btn btn-secondary" data-v4="retry">Qayta urinaman</button><button class="btn btn-primary" data-v4="guided-next">Tushundim, davom etaman →</button></div>`:
  lesson.phase==='checked'?`<div class="v4-correct">✅ To‘g‘ri! Endi keyingi so‘zga o‘tamiz.</div><button class="btn btn-primary" data-v4="typed-next">Keyingi so‘z →</button>`:
- `<form class="v4-typing" id="v4-learning-form"><label for="v4-answer">${round===2?'Gapdagi tushib qolgan so‘zni yozing':'Eshitgan inglizcha so‘zni yozing'}</label><div class="v4-inline"><input id="v4-answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${round===2?'Gap uchun so‘z...':'Eshitganingizni yozing...'}" required maxlength="80"><button class="btn btn-primary" type="submit">Tekshirish ↗</button></div></form><p class="v4-muted">${round===2?'Bu yodlash mashqi: yordam kerak bo‘lsa talaffuzni bosishingiz mumkin.':'Istaganingizcha qayta eshiting.'}</p>`}
+ round===2?`<div class="v4-lesson-options">${v4RecognitionChoices(lesson,w).map((option,i)=>`<button class="v4-lesson-option" type="button" data-v4="recognize" data-index="${i}">${esc(option)}</button>`).join('')}</div><p class="v4-muted">Bu tanishish bosqichi, noto‘g‘ri javobdan qo‘rqmang.</p>`:`<form class="v4-typing" id="v4-learning-form"><label for="v4-answer">Eshitgan inglizcha so‘zni yozing</label><div class="v4-inline"><input id="v4-answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Eshitganingizni yozing..." required maxlength="80"><button class="btn btn-primary" type="submit">Tekshirish ↗</button></div></form><div class="v4-hint-panel">${(lesson.hint||0)>0?`<p>${lesson.hint===1?`Birinchi harfi: <strong>${esc(w.en.charAt(0))}</strong> · ${w.en.length} ta belgi`:`So‘z: <strong>${esc(w.en)}</strong> — ${esc(w.uz)}`}</p>`:''}<button class="v4-hint-btn" data-v4="hint" type="button" ${(lesson.hint||0)>=2?'disabled':''}>${(lesson.hint||0)===0?'💡 Birinchi harfni ko‘rish':(lesson.hint||0)===1?'👁️ Javobni ko‘rish':'Ishora ko‘rsatildi'}</button>${lesson.hint>=2?'<button class="v4-hint-btn" data-v4="guided-next">Tushundim, davom etaman →</button>':''}</div><p class="v4-muted">Qiynalsangiz ishora oling. Bu test emas.</p>`}
  <p class="v4-safety-note">Jarayoningiz ushbu brauzerda saqlanadi. Siz uni davom ettirishingiz mumkin.</p></section>`;
 }
 function v4Advance(){
- const L=V4.lesson;if(!L)return;
- L.index++;L.phase=L.round===1?'see':'type';L.checked=false;L.tries=0;
- if(L.index>=L.ids.length){L.index=0;L.completedRounds++;L.round++;L.phase=L.round===1?'see':'type';if(L.completedRounds>=V4.minRounds)L.finished=true;}
+ const L=V4.lesson;if(!L||L.finished)return;
+ const size=L.chunkSize||L.ids.length;
+ const end=Math.min(L.ids.length,(L.chunkStart||0)+size);
+ if(L.index+1<end)L.index++;
+ else{
+  L.completedRounds++;
+  if(L.round<3){L.round++;L.index=L.chunkStart||0;}
+  else if(end>=L.ids.length){L.finished=true;L.index=0;}
+  else{L.chunkStart=end;L.index=end;L.round=1;}
+ }
+ L.phase=L.round===1?'see':L.round===2?'choice':'type';L.checked=false;L.tries=0;L.hint=0;L.choiceWord=null;L.choices=[];
  v4SaveLesson();render();
- if(!L.finished){if(L.round!==2)v4Pronounce();if(L.phase==='type')requestAnimationFrame(()=>document.getElementById('v4-answer')?.focus({preventScroll:true}));}
+ if(!L.finished){if(L.round!==2)v4Pronounce();if(L.round===3)requestAnimationFrame(()=>document.getElementById('v4-answer')?.focus({preventScroll:true}));}
 }
-function v4LessonComplete(){const L=V4.lesson;return `<section class="v4-complete"><div class="v4-celebration">🌱🎉</div><h1>${L.completedRounds} marta aylantirib chiqdingiz!</h1><p>${L.ids.length} ta so‘z bilan tanishdingiz, talaffuzini eshitdingiz va yozib ko‘rdingiz. Yetarlicha esingizda qoldimi?</p><div class="v4-complete-actions"><button class="btn btn-secondary" data-v4="repeat">🔁 Yana bir marta qaytarish</button><button class="btn btn-primary" data-v4="finish-lesson" ${V4.testSaving?'disabled':''}>✅ Men tayyorman — mashqlarga o‘tish</button></div><p class="v4-muted">Hozir “Yodlanmoqda” holatiga o‘tadi. “Yodlangan” holati uchun alohida test kerak.</p><button class="v4-text-link" data-v4="leave-lesson">Saqlab, keyinroq davom ettirish</button></section>`;}
+function v4LessonComplete(){const L=V4.lesson;return `<section class="v4-complete"><div class="v4-celebration">🌱🎉</div><h1>${L.ids.length} ta so‘zni 3 bosqichda o‘rgandingiz!</h1><p>${L.ids.length} ta so‘z bilan tanishdingiz, talaffuzini eshitdingiz va yozib ko‘rdingiz. Yetarlicha esingizda qoldimi?</p><div class="v4-complete-actions"><button class="btn btn-secondary" data-v4="repeat">🔁 Yana bir marta qaytarish</button><button class="btn btn-primary" data-v4="finish-lesson" ${V4.testSaving?'disabled':''}>✅ Men tayyorman — mashqlarga o‘tish</button></div><p class="v4-muted">Hozir “Yodlanmoqda” holatiga o‘tadi. “Yodlangan” holati uchun alohida test kerak.</p><button class="v4-text-link" data-v4="leave-lesson">Saqlab, keyinroq davom ettirish</button></section>`;}
 async function v4FinishLesson(){
  if(!V4.lesson?.finished||V4.testSaving)return;
  V4.testSaving=true;
@@ -185,6 +201,7 @@ function v4DateSelect(which){const value=which==='test'?V4.examDate:V4.practiceD
 function v4PracticeWords(date=V4.practiceDate){return v4Words().filter(w=>v4Introduced(w)&&(date==='all'||v4Meta(w).introduced_on===date));}
 function v4DrillPage(){const total=v4PracticeWords().length;return `<section class="v4-page"><div class="overline">2-BOSQICH · MUSTAHKAMLASH</div><h1>Mashqlar 🎯</h1><p>Faqat avval yodlash bosqichidan o‘tgan so‘zlar. Mashq qilish so‘zni avtomatik “Yodlangan”ga o‘tkazmaydi.</p>${v4Warning()}
  <div class="v4-date-picker">${v4DateSelect('practice')}<span>${total} ta tayyor so‘z</span></div>
+ <div class="v4-drill-limit"><label for="v4-drill-size">Mashq hajmi <select id="v4-drill-size"><option value="all" ${V4.practiceLimit==='all'?'selected':''}>Barcha ${total} ta so‘z</option>${[5,10,15,20,30,40].map(n=>`<option value="${n}" ${String(V4.practiceLimit)===String(n)?'selected':''}>${Math.min(total,n)} ta so‘z</option>`).join('')}</select></label><p>Ushbu mashqda ${V4.practiceLimit==='all'?total:Math.min(total,Number(V4.practiceLimit))} / ${total} ta so‘z bo‘ladi.</p></div>
  <div class="v4-modes">${modes.filter(m=>['choice','write','listen','mix'].includes(m.id)).map(m=>`<button class="mode-card ${m.color}" data-v4="start-drill" data-mode="${m.id}" ${!V4.ready||!total?'disabled':''}><div class="mode-top"><div class="mode-icon">${I(m.icon,24)}</div><span class="mode-arrow">${I('arrow',20)}</span></div><div class="mode-label">${m.badge}</div><h3>${m.name}</h3><p>${m.subtitle}</p></button>`).join('')}</div><button class="v4-link-test" data-v4="nav" data-page="exam">Yodlaganingizni aniq tekshirishni xohlaysizmi? <strong>Test bo‘limiga o‘ting →</strong></button></section>`;}
 const v4ExamQuestions=(words)=>shuffle(words).map((w,i)=>{
  const type=i%3===0?'choice':i%3===1?'write':'listen';
@@ -271,7 +288,8 @@ startPractice=async function(mode){
  if(!V4.ready){toast('Avval Wordora 4.0 Supabase migratsiyasini bajaring.');return;}
  const eligible=v4PracticeWords().filter(w=>!V4.reviewOnly||v4Due(w));V4.reviewOnly=false;if(!eligible.length){toast('Bu guruhdagi so‘zlar bilan hali tanishmagansiz.');return;}
  const selected=shuffle(eligible.filter(w=>v4Due(w)));const rest=shuffle(eligible.filter(w=>!v4Due(w)));
- const order=[...selected,...rest].slice(0,Math.max(1,state.sessionLimit));
+ const limit=V4.practiceLimit==='all'?eligible.length:Math.max(1,Number(V4.practiceLimit)||eligible.length);
+ const order=[...selected,...rest].slice(0,limit);
  cancelAutoNext();state.saving=false;state.session=order;state.studyMode=mode;state.index=0;state.sessionCorrect=0;state.sessionWrong=0;state.sessionFinished=!order.length;state.page='practice';
  if(order.length)initializeQuestion();render();window.scrollTo({top:0,behavior:'instant'});focusAnswer();
 };
@@ -303,7 +321,21 @@ document.addEventListener('click',e=>{
  else if(act==='discard'){if(confirm('Tugallanmagan mashg‘ulotni bekor qilasizmi? Bu so‘zlar hali “Yodlanmoqda”ga o‘tmagan.')){V4.lesson=null;v4SafeStorage.delete();render();}}
  else if(act==='sound')v4Pronounce();
  else if(act==='first-next'||act==='typed-next')v4Advance();
- else if(act==='retry'){V4.lesson.phase='type';v4SaveLesson();render();requestAnimationFrame(()=>document.getElementById('v4-answer')?.focus({preventScroll:true}));}
+ else if(act==='recognize'){
+  const L=V4.lesson,w=v4LessonWord();
+  if(!L||!w||L.round!==2||L.phase!=='choice')return;
+  const value=L.choices?.[Number(btn.dataset.index)];if(!value)return;
+  L.phase=normalize(value)===normalize(w.en)?'checked':'wrong';
+  if(L.phase==='wrong')L.errors++;
+  v4SaveLesson();render();if(L.phase==='checked')window.WordoraV5Schedule?.();
+ }
+ else if(act==='hint'){
+  const L=V4.lesson;if(!L||L.round!==3||L.phase==='checked')return;
+  L.hint=Math.min(2,(L.hint||0)+1);v4SaveLesson();render();
+  requestAnimationFrame(()=>document.getElementById('v4-answer')?.focus({preventScroll:true}));
+ }
+ else if(act==='guided-next')v4Advance();
+ else if(act==='retry'){V4.lesson.phase=V4.lesson.round===2?'choice':'type';v4SaveLesson();render();if(V4.lesson.round===3)requestAnimationFrame(()=>document.getElementById('v4-answer')?.focus({preventScroll:true}));}
  else if(act==='repeat')v4RestartLesson();
  else if(act==='finish-lesson')v4FinishLesson();
  else if(act==='leave-lesson')v4Leave('learn');
@@ -323,6 +355,7 @@ document.addEventListener('change',e=>{
  else if(id==='v4-topic'){V4.topic=v;render();}
  else if(id==='v4-type'){V4.wordType=v;render();}
  else if(id==='v4-practice-date'){V4.practiceDate=v;render();}
+ else if(id==='v4-drill-size'){V4.practiceLimit=v;render();}
  else if(id==='v4-test-date'){V4.examDate=v;render();}
 },true);
 document.addEventListener('input',e=>{if(e.target.id==='v4-count')V4.count=Math.max(1,Math.min(40,Math.round(Number(e.target.value)||20)));},true);
