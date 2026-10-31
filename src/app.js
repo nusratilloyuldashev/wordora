@@ -250,7 +250,7 @@ async function saveAndAdvance(quality){
   await api('/reviews',{method:'POST',body:JSON.stringify({word_id:w.id,mode:questionMode(),quality})});
   if(quality>=3)state.sessionCorrect++;else state.sessionWrong++;
   state.index++;
-  if(state.index>=state.session.length){state.sessionFinished=true;await loadCore();}
+  if(state.index>=state.session.length){state.sessionFinished=true;window.WordoraV7?.invalidate('practice-finished');await loadCore();}
   else initializeQuestion();
   render();
  }catch(e){toast(e.message);}finally{state.saving=false;}
@@ -260,7 +260,7 @@ function checkTyped(){if(state.answered)return;const input=document.getElementBy
  state.answerValue=value;const w=state.session[state.index];state.answerCorrect=normalize(value)===normalize(w.en);state.quality=state.answerCorrect?4:1;state.answered=true;render();scheduleAutoNext();}
 async function addWord(form){if(state.busy)return;
  const body=Object.fromEntries(new FormData(form).entries());state.busy=true;
- try{await api('/words',{method:'POST',body:JSON.stringify(body)});await loadCore();state.showAdd=false;state.libraryCategory='mine';state.search='';toast('Yangi so‘z lug‘atingizga qo‘shildi!','success');render();}
+ try{await api('/words',{method:'POST',body:JSON.stringify(body)});window.WordoraV7?.invalidate('word-created');await loadCore();state.showAdd=false;state.libraryCategory='mine';state.search='';toast('Yangi so‘z lug‘atingizga qo‘shildi!','success');render();}
  catch(e){toast(e.message);}finally{state.busy=false;}
 }
 document.addEventListener('submit',e=>{
@@ -324,7 +324,7 @@ document.addEventListener('click',async e=>{
  else if(action==='delete-word'){
    let w=state.words.find(x=>x.id===Number(b.dataset.wordId));
    if(!w||!confirm(`“${w.en}” so‘zini o‘chirasizmi?`))return;
-   try{await api(`/words/${w.id}`,{method:'DELETE'});await loadCore();render();toast('So‘z o‘chirildi.','success');}catch(err){toast(err.message);}
+   try{await api(`/words/${w.id}`,{method:'DELETE'});window.WordoraV7?.invalidate('word-deleted');await loadCore();render();toast('So‘z o‘chirildi.','success');}catch(err){toast(err.message);}
  }
  else if(action==='logout'){
    cancelAutoNext();const {error}=await client.auth.signOut();if(error){toast(error.message);return;}

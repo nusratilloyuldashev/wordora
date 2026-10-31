@@ -194,7 +194,7 @@ async function v4FinishLesson(){
   const {error}=await client.from('word_learning').upsert(rows,{onConflict:'user_id,word_id',ignoreDuplicates:true});
   if(error)throw Error(error.message);
   v4SafeStorage.delete();V4.lesson=null;V4.practiceDate=today;V4.examDate=today;
-  await loadCore();state.page='exercises';render();toast('So‘zlar “Yodlanmoqda”ga qo‘shildi. Mashq qilib mustahkamlang!','success');
+  window.WordoraV7?.invalidate('lesson-finished');await loadCore();state.page='exercises';render();toast('So‘zlar “Yodlanmoqda”ga qo‘shildi. Mashq qilib mustahkamlang!','success');
  }catch(e){toast('Natijani saqlab bo‘lmadi: '+e.message);}finally{V4.testSaving=false;}
 }
 function v4DateSelect(which){const value=which==='test'?V4.examDate:V4.practiceDate,groups=v4Groups(false);return `<label>Qaysi kuni o‘rganilgan so‘zlar? <select id="v4-${which}-date"><option value="all" ${value==='all'?'selected':''}>Barcha sanalar</option>${groups.map(([day,words])=>`<option value="${day}" ${value===day?'selected':''}>${v4DateLabel(day)} · ${words.length} ta so‘z</option>`).join('')}</select></label>`;}
@@ -257,7 +257,7 @@ async function v4SaveExam(){const E=V4.exam;if(!E?.finished||E.saving||E.result=
   // Supabase upsert is atomic at the SQL-statement level.
   const {error}=await client.from('word_learning').upsert(changes,{onConflict:'user_id,word_id'});
   if(error)throw Error(error.message);
-  E.result='saved';await loadCore();render();toast('Test natijalari saqlandi!','success');
+  E.result='saved';window.WordoraV7?.invalidate('test-finished');await loadCore();render();toast('Test natijalari saqlandi!','success');
  }catch(e){toast('Testni saqlab bo‘lmadi: '+e.message);}finally{E.saving=false;render();}
 }
 function v4MasteryReview(){const due=v4Words().filter(w=>v4Due(w));return due.length?`<div class="v4-review-callout"><div><strong>🔁 Bugun ${due.length} ta so‘zni eslash vaqti</strong><p>Oldin yodlanganlarni ham unutmaslik uchun qaytarib turing.</p></div><button class="btn btn-primary" data-v4="review-due">Takrorlash →</button></div>`:`<div class="v4-review-callout clear"><div><strong>✅ Bugungi takrorlash tugallangan</strong><p>Yangi so‘zlar bilan tanishing yoki test topshiring.</p></div></div>`;}
@@ -281,7 +281,7 @@ pageShell=function(){
  const title={dashboard:'Bosh sahifa',learn:'So‘z yodlash',exercises:'Mashqlar',exam:'Test',library:'Mening lug‘atim','v4-lesson':'Yodlash','v4-exam':'Test',practice:'Mashqlar'}[state.page]||'Wordora';
  const content=state.page==='dashboard'?dashboardPage():state.page==='learn'?v4LessonPage():state.page==='v4-lesson'?v4LessonScreen():state.page==='exercises'?v4DrillPage():state.page==='exam'?v4ExamPage():state.page==='v4-exam'?v4TestScreen():state.page==='library'?libraryPage():practicePage();
  return `<div class="app-layout"><aside class="sidebar"><div class="brand"><div class="brand-symbol">W<span>·</span></div><span>wordora<span class="brand-dot">.</span></span></div><div class="nav-caption">O‘RGANISH BOSQICHLARI</div><nav class="side-nav">${navitem('dashboard','home','Bosh sahifa')}${navitem('learn','layers','So‘z yodlash')}${navitem('exercises','target','Mashqlar')}${navitem('exam','check','Test')}${navitem('library','library','Mening lug‘atim')}</nav><div class="sidebar-spacer"></div><div class="side-tip"><span class="tip-sun">✦</span><h3>Avval tanishing,<br>keyin test qiling!</h3><p>90% natija — yodlangan so‘zlar uchun mezon.</p></div><button class="sidebar-logout" data-action="logout">${I('logout',18)} <span>Hisobdan chiqish</span></button></aside>
- <div class="workspace"><header class="topbar"><div class="breadcrumb">Wordora <span> / </span><b>${esc(title)}</b></div><div class="topbar-right"><div class="streak-mini">${I('flame',19)} <strong>${state.stats?.streak||0}</strong> kun</div><div class="avatar">${esc(username.charAt(0).toUpperCase())}</div><span class="top-name">${esc(username)}</span></div></header><main class="main-content ${['v4-lesson','v4-exam'].includes(state.page)?'v4-study-main':''}">${content}</main><nav class="mobile-nav">${mobile('dashboard','home','Bosh sahifa')}${mobile('learn','layers','Yodlash')}${mobile('exercises','target','Mashq')}${mobile('exam','check','Test')}${mobile('library','library','Lug‘at')}</nav></div></div>`;
+ <div class="workspace"><header class="topbar"><div class="breadcrumb">Wordora <span> / </span><b>${esc(title)}</b><span class="v7-version">v7.0</span></div><div class="topbar-right"><div class="streak-mini">${I('flame',19)} <strong>${state.stats?.streak||0}</strong> kun</div><div class="avatar">${esc(username.charAt(0).toUpperCase())}</div><span class="top-name">${esc(username)}</span></div></header><main class="main-content ${['v4-lesson','v4-exam'].includes(state.page)?'v4-study-main':''}">${content}</main><nav class="mobile-nav">${mobile('dashboard','home','Bosh sahifa')}${mobile('learn','layers','Yodlash')}${mobile('exercises','target','Mashq')}${mobile('exam','check','Test')}${mobile('library','library','Lug‘at')}</nav></div></div>`;
 };
 const v4LegacyStartPractice=startPractice;
 startPractice=async function(mode){

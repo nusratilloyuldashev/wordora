@@ -193,7 +193,7 @@ async function v5AddWord(form){if(V5.adding)return;V5.adding=true;
   else{if(!String(body.uz||'').trim())throw Error('O‘zbekcha ma’nosini kiriting.');const result=await api('/words',{method:'POST',body:JSON.stringify({en:word,uz:body.uz,topic,word_type:type,example_en:body.example_en||'',example_uz:body.example_uz||''})});id=result.id;}
   if(collection)await v5Link(id,collection.id);
   V5.lookup=null;V5.typeTouched=false;V5.topicTouched=false;
-  await loadCore();state.showAdd=false;state.libraryStage='all';state.librarySource='all';state.libraryTopic='all';state.libraryType='all';state.search='';V5.libraryCollection=collection?String(collection.id):'all';render();
+  window.WordoraV7?.invalidate('word-or-collection-created');await loadCore();state.showAdd=false;state.libraryStage='all';state.librarySource='all';state.libraryTopic='all';state.libraryType='all';state.search='';V5.libraryCollection=collection?String(collection.id):'all';render();
   toast(duplicate?`“${word}” so‘zi “${collection.name}” to‘plamiga biriktirildi.`:collection?'So‘z lug‘at va tanlangan to‘plamga qo‘shildi!':'So‘z umumiy lug‘atga qo‘shildi!','success');
  }catch(err){toast(err.message);}
  finally{V5.adding=false;if(document.contains(save))save.disabled=false;}

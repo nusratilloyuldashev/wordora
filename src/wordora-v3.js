@@ -91,7 +91,7 @@ addWord = async function(form){if(state.busy)return;
  const body=Object.fromEntries(new FormData(form).entries());
  if(!v3Topics.some(t=>t[0]===body.topic)||!v3Types.some(t=>t[0]===body.word_type)){toast('Mavzu va so‘z turkumini tanlang.');return;}
  state.busy=true;
- try{await api('/words',{method:'POST',body:JSON.stringify(body)});await loadCore();state.showAdd=false;state.libraryStage='active';state.librarySource='mine';state.libraryTopic=body.topic;state.libraryType=body.word_type;state.search='';render();toast(window.WordoraBackend.taxonomyReady===false?'So‘z saqlandi; teglarni qo‘shish uchun Supabase migratsiyasini bajaring.':'So‘z mavzu va turkum bilan saqlandi!','success');}
+ try{await api('/words',{method:'POST',body:JSON.stringify(body)});window.WordoraV7?.invalidate('word-created');await loadCore();state.showAdd=false;state.libraryStage='active';state.librarySource='mine';state.libraryTopic=body.topic;state.libraryType=body.word_type;state.search='';render();toast(window.WordoraBackend.taxonomyReady===false?'So‘z saqlandi; teglarni qo‘shish uchun Supabase migratsiyasini bajaring.':'So‘z mavzu va turkum bilan saqlandi!','success');}
  catch(e){toast(e.message);}finally{state.busy=false;}
 };
 let v3SearchTimer=null;
@@ -121,5 +121,5 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');
 document.addEventListener('submit',async e=>{if(e.target.id!=='v3-edit-form')return;
  e.preventDefault();const form=e.target,body=Object.fromEntries(new FormData(form).entries());
  if(!v3Topics.some(t=>t[0]===body.topic)||!v3Types.some(t=>t[0]===body.word_type)){toast('Mavzu va so‘z turkumini tanlang.');return;}
- try{await api(`/words/${Number(body.id)}`,{method:'PATCH',body:JSON.stringify({topic:body.topic,word_type:body.word_type})});await loadCore();state.editWordId=null;render();toast('So‘z tasnifi yangilandi!','success');}catch(err){toast(err.message);}
+ try{await api(`/words/${Number(body.id)}`,{method:'PATCH',body:JSON.stringify({topic:body.topic,word_type:body.word_type})});window.WordoraV7?.invalidate('word-edited');await loadCore();state.editWordId=null;render();toast('So‘z tasnifi yangilandi!','success');}catch(err){toast(err.message);}
 });

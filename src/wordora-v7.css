@@ -1,0 +1,11 @@
+
+/* Wordora 7.0: render long dictionaries in small, keyboard-friendly pages. */
+.v7-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 24px;padding:13px 16px;border:1px solid #e7e2fa;background:#fff;border-radius:14px;color:#696187;font-size:13px;font-weight:750}
+.v7-pages>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.v7-pages button{border:1px solid #dcd6f4;background:#f8f6ff;color:#6650bf;padding:10px 14px;border-radius:10px;font:inherit;cursor:pointer;min-height:40px}
+.v7-pages button:hover:not(:disabled){background:#eae4ff;border-color:#a89cee}
+.v7-pages button:disabled{opacity:.45;cursor:default}
+.v7-pages strong{color:#3d3458;min-width:40px;text-align:center}
+@media(max-width:590px){.v7-pages{justify-content:center;text-align:center}.v7-pages>div{width:100%;justify-content:center}.v7-pages button{flex:1}}
+
+.v7-version{display:inline-block;margin-left:10px;padding:3px 7px;border-radius:7px;background:#eeeaff;color:#6550ba;font-weight:850;font-size:10px;vertical-align:middle;letter-spacing:.2px}
