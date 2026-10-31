@@ -1,0 +1,30 @@
+name: Wordora bounded public-asset smoke load
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wordora-smoke-load.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wordora-bounded-smoke-test
+  cancel-in-progress: false
+jobs:
+  static-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Wordora
+        uses: actions/checkout@v4
+      - name: Node environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Bounded live test of public static assets
+        env:
+          BASE_URL: https://wordora.pages.dev
+          VUS: '5'
+          DURATION_SEC: '20'
+          PAUSE_MS: '1000'
+        run: node scripts/wordora-smoke-load.mjs
