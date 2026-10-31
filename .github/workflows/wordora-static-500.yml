@@ -1,0 +1,44 @@
+name: Wordora 500 bounded public-asset load
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wordora-static-500.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wordora-static-500-test
+  cancel-in-progress: false
+jobs:
+  cloudflare-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Wordora
+        uses: actions/checkout@v4
+      - name: Prepare Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Stage 1 - 100 users, static files only
+        env:
+          BASE_URL: https://wordora.pages.dev
+          VUS: '100'
+          DURATION_SEC: '20'
+          PAUSE_MS: '3000'
+        run: node scripts/wordora-static-500.mjs
+      - name: Stage 2 - 250 users, static files only
+        env:
+          BASE_URL: https://wordora.pages.dev
+          VUS: '250'
+          DURATION_SEC: '20'
+          PAUSE_MS: '4000'
+        run: node scripts/wordora-static-500.mjs
+      - name: Stage 3 - 500 users, static files only
+        env:
+          BASE_URL: https://wordora.pages.dev
+          VUS: '500'
+          DURATION_SEC: '20'
+          PAUSE_MS: '5000'
+        run: node scripts/wordora-static-500.mjs
