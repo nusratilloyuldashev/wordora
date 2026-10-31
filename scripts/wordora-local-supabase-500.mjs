@@ -219,13 +219,14 @@ try{
   await sleep(1500);
  }
  // Count rows via LOCAL service-role only after the stages; this verifies persistence, not just HTTP 200.
- const count=async(table,query)=>{
-  const {count,error}=await query.select('*',{count:'exact',head:true});
+ const count=async(table,query,personalOnly=false)=>{
+  const selected=query.select('*',{count:'exact',head:true});
+  const {count,error}=await (personalOnly?selected.not('owner_id','is',null):selected);
   if(error)throw Error('Count '+table+': '+error.message);
   return count;
  };
  const totals={
-  personalWords:await count('personalWords',root.from('words').not('owner_id','is',null)),
+  personalWords:await count('personalWords',root.from('words'),true),
   units:await count('units',root.from('word_collections')),
   learning:await count('learning',root.from('word_learning')),
   reviews:await count('reviews',root.from('reviews')),
