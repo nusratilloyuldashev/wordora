@@ -83,7 +83,7 @@ test('all write paths invalidate their cached account snapshot',()=>{
 });
 test('PWA pre-caches the latest JS and CSS, and keeps old word-learning mastery',()=>{
  const html=read('src/index.html'),worker=read('src/service-worker.js'),v4=read('src/wordora-v4.js');
- assert.match(worker,/wordora-pwa-7\.0\.0/);
+ assert.match(worker,/wordora-pwa-7\.0\.1/);
  assert.match(worker,/wordora-v7\.js/);
  assert.match(worker,/wordora-v7\.css/);
  assert.match(html,/wordora-v7\.js/);
@@ -91,4 +91,23 @@ test('PWA pre-caches the latest JS and CSS, and keeps old word-learning mastery'
  assert.match(v4,/threshold: 90/);
  assert.match(v4,/const promote=passed&&q\.checked/);
  new Function(worker);new Function(source);
+});
+
+test('real library renderer paginates both above and below, preserving counts',()=>{
+ const code=read('src/wordora-v3.js');
+ const section=code.slice(code.indexOf('libraryPage = function(){'),code.indexOf('\nstartPractice = async function'));
+ assert.ok(section.includes('pageSize=50'));
+ assert.ok(section.includes('visible.map(w=>'));
+ const state={words:Array.from({length:123},(_,i)=>({id:i+1,en:'word'+(i+1),uz:'uz'+(i+1),owner_id:null,example_en:''})),
+  libraryPage:0,libraryStage:'all',libraryTopic:'all',libraryType:'all',librarySource:'all',showAdd:false,editWordId:null,search:''};
+ const ctx={state,v3Summary:()=>({new:123,learning:0,mastered:0,due:0,total:123}),v3LibraryMatches:()=>true,
+  v3Warning:()=>'',v3TopicOptions:()=>'',v3TypeOptions:()=>'',v3TopicPill:()=>'',v3WordType:()=>'',v3TypeName:()=>'',v3StatTag:()=>'',esc:x=>String(x),I:()=>'',window:{WordoraBackend:{taxonomyReady:true}}};
+ vm.createContext(ctx);vm.runInContext('var libraryPage;'+section,ctx,{timeout:1000});
+ for(const [page,count,range] of [[0,50,'1–50'],[1,50,'51–100'],[2,23,'101–123']]){
+  state.libraryPage=page;const html=ctx.libraryPage();
+  assert.equal((html.match(/class="word-pronounce"/g)||[]).length,count);
+  assert.equal((html.match(/class="v7-pages"/g)||[]).length,2);
+  assert.ok(html.includes(range+' / 123 ta so‘z'));
+ }
+ state.libraryPage=99;ctx.libraryPage();assert.equal(state.libraryPage,2);
 });
