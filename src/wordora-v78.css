@@ -1,0 +1,26 @@
+/* Wordora 7.8 — usable Unit workspace and accessible mobile actions */
+.v78-workspace{margin:16px 0 20px;padding:21px;border:1px solid #e7e1f8;border-radius:20px;background:#fff}
+.v78-title{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px}
+.v78-title h2{font-size:19px;color:#292448;margin:5px 0}
+.v78-title p{color:#817a9e;font-size:12px;margin:0}
+.v78-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.v78-unit{border:1px solid #e9e4f7;background:#fdfcff;border-radius:15px;padding:15px;min-width:0}
+.v78-unit.selected{border-color:#ab9beb;background:#faf8ff}
+.v78-unit-name{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.v78-unit-name h3{margin:0;font-size:14px;overflow-wrap:anywhere;color:#332e4f}
+.v78-unit-name span{font-size:11px;font-weight:850;color:#765ddd;white-space:nowrap}
+.v78-meter{height:7px;background:#eae7f5;border-radius:8px;overflow:hidden;margin:12px 0}
+.v78-meter i{display:block;background:#7c62e7;height:100%;border-radius:8px}
+.v78-counts{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:11px;color:#66617c}
+.v78-counts span{white-space:nowrap}
+.v78-unit-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px}
+.v78-workspace button{border:1px solid #dcd4f4;background:#f2efff;color:#6651c0;border-radius:10px;padding:9px 7px;font:inherit;font-size:11px;font-weight:800;min-height:44px;cursor:pointer}
+.v78-unit-actions button:not(:first-child){background:#fff}
+.v78-workspace button:disabled{opacity:.45;cursor:default}
+.v78-workspace button:hover:not(:disabled){background:#e6defe}
+.v78-workspace button:focus-visible{outline:3px solid #6751d8;outline-offset:2px}
+.v78-more{display:flex;justify-content:center;margin-top:14px}
+.v78-note{font-size:11px;color:#7c7495;margin:14px 0 0;line-height:1.6}
+@media(max-width:750px){.v78-workspace{padding:14px}.v78-grid{grid-template-columns:1fr}.v78-unit-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.v78-unit-name{flex-wrap:wrap}.v78-counts span{white-space:normal}}
+@media(max-width:430px){.v78-unit{padding:12px}.v78-title h2{font-size:17px}.v78-unit-actions button{min-height:46px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){.v78-workspace *, .v78-workspace *::before,.v78-workspace *::after{animation:none!important;transition:none!important}}
