@@ -68,16 +68,18 @@ const v4Set = data => { const map={}; for(const x of data||[])map[String(x.word_
 const v4SafeStorage = {read(){try{return JSON.parse(localStorage.getItem(v4Key())||'null');}catch{return null;}},write(v){try{localStorage.setItem(v4Key(),JSON.stringify(v));}catch{}},delete(){try{localStorage.removeItem(v4Key());}catch{}}};
 async function v4Fetch(){
   if(!state.user)return;
-  if(V4.activeAccount!==state.user.id){V4.lesson=null;V4.exam=null;V4.activeAccount=state.user.id;}
+  const loadingUser=state.user.id;
+  if(V4.activeAccount!==loadingUser){V4.lesson=null;V4.exam=null;V4.activeAccount=loadingUser;}
   const records=[]; let error=null;
   for(let start=0;start<6000;start+=1000){
     const result=await client.from('word_learning')
       .select('word_id,stage,introduced_on,next_review_on,review_interval,last_test_score,tested_at')
-      .eq('user_id',state.user.id).order('word_id',{ascending:true}).range(start,start+999);
+      .eq('user_id',loadingUser).order('word_id',{ascending:true}).range(start,start+999);
     if(result.error){error=result.error;break;}
     records.push(...(result.data||[]));
     if((result.data||[]).length<1000)break;
   }
+  if(state.user?.id!==loadingUser||V4.activeAccount!==loadingUser)return;
   if(error){
     const missing=['42P01','PGRST205','PGRST116'].includes(error.code)||/relation .* does not exist|schema cache|could not find the table/i.test(error.message||'');
     V4.ready=false;V4.unavailable=missing;V4.announce=missing?'Supabase upgrade_4_0.sql migratsiyasi hali bajarilmagan.':error.message;
@@ -281,7 +283,7 @@ pageShell=function(){
  const title={dashboard:'Bosh sahifa',learn:'So‘z yodlash',exercises:'Mashqlar',exam:'Test',library:'Mening lug‘atim','v4-lesson':'Yodlash','v4-exam':'Test',practice:'Mashqlar'}[state.page]||'Wordora';
  const content=state.page==='dashboard'?dashboardPage():state.page==='learn'?v4LessonPage():state.page==='v4-lesson'?v4LessonScreen():state.page==='exercises'?v4DrillPage():state.page==='exam'?v4ExamPage():state.page==='v4-exam'?v4TestScreen():state.page==='library'?libraryPage():practicePage();
  return `<div class="app-layout"><aside class="sidebar"><div class="brand"><div class="brand-symbol">W<span>·</span></div><span>wordora<span class="brand-dot">.</span></span></div><div class="nav-caption">O‘RGANISH BOSQICHLARI</div><nav class="side-nav">${navitem('dashboard','home','Bosh sahifa')}${navitem('learn','layers','So‘z yodlash')}${navitem('exercises','target','Mashqlar')}${navitem('exam','check','Test')}${navitem('library','library','Mening lug‘atim')}</nav><div class="sidebar-spacer"></div><div class="side-tip"><span class="tip-sun">✦</span><h3>Avval tanishing,<br>keyin test qiling!</h3><p>90% natija — yodlangan so‘zlar uchun mezon.</p></div><button class="sidebar-logout" data-action="logout">${I('logout',18)} <span>Hisobdan chiqish</span></button></aside>
- <div class="workspace"><header class="topbar"><div class="breadcrumb">Wordora <span> / </span><b>${esc(title)}</b><span class="v7-version">v7.6</span></div><div class="topbar-right"><div class="streak-mini">${I('flame',19)} <strong>${state.stats?.streak||0}</strong> kun</div><div class="avatar">${esc(username.charAt(0).toUpperCase())}</div><span class="top-name">${esc(username)}</span></div></header><main class="main-content ${['v4-lesson','v4-exam'].includes(state.page)?'v4-study-main':''}">${content}</main><nav class="mobile-nav">${mobile('dashboard','home','Bosh sahifa')}${mobile('learn','layers','Yodlash')}${mobile('exercises','target','Mashq')}${mobile('exam','check','Test')}${mobile('library','library','Lug‘at')}</nav></div></div>`;
+ <div class="workspace"><header class="topbar"><div class="breadcrumb">Wordora <span> / </span><b>${esc(title)}</b><span class="v7-version">v7.7</span></div><div class="topbar-right"><div class="streak-mini">${I('flame',19)} <strong>${state.stats?.streak||0}</strong> kun</div><div class="avatar">${esc(username.charAt(0).toUpperCase())}</div><span class="top-name">${esc(username)}</span></div></header><main class="main-content ${['v4-lesson','v4-exam'].includes(state.page)?'v4-study-main':''}">${content}</main><nav class="mobile-nav">${mobile('dashboard','home','Bosh sahifa')}${mobile('learn','layers','Yodlash')}${mobile('exercises','target','Mashq')}${mobile('exam','check','Test')}${mobile('library','library','Lug‘at')}</nav></div></div>`;
 };
 const v4LegacyStartPractice=startPractice;
 startPractice=async function(mode){

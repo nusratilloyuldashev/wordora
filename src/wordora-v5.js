@@ -31,16 +31,18 @@ function v5Error(result){if(!result.error)return result.data;throw Error(result.
 async function v5User(){const r=await client.auth.getUser();if(r.error||!r.data?.user)throw Error('Qayta kirishingiz kerak.');return r.data.user;}
 async function v5Load(){
  if(!state.user||!client)return;
- if(V5.account!==state.user.id){V5.collections=[];V5.items=[];v5ReindexItems();V5.account=state.user.id;V5.manageWord=null;V5.libraryCollection='all';V5.learnCollection='all';V5.practiceCollection='all';V5.examCollection='all';}
+ const loadingUser=state.user.id;
+ if(V5.account!==loadingUser){V5.collections=[];V5.items=[];v5ReindexItems();V5.account=loadingUser;V5.manageWord=null;V5.libraryCollection='all';V5.learnCollection='all';V5.practiceCollection='all';V5.examCollection='all';}
  V5.loading=true;
  try{
-  const a=await client.from('word_collections').select('id,name,created_at').eq('user_id',state.user.id).order('created_at',{ascending:true});
+  const a=await client.from('word_collections').select('id,name,created_at').eq('user_id',loadingUser).order('created_at',{ascending:true});
   if(a.error)throw a.error;
   const items=[];
-  for(let n=0;n<6000;n+=1000){const r=await client.from('word_collection_items').select('collection_id,word_id').eq('user_id',state.user.id).range(n,n+999);if(r.error)throw r.error;items.push(...(r.data||[]));if((r.data||[]).length<1000)break;}
+  for(let n=0;n<6000;n+=1000){const r=await client.from('word_collection_items').select('collection_id,word_id').eq('user_id',loadingUser).range(n,n+999);if(r.error)throw r.error;items.push(...(r.data||[]));if((r.data||[]).length<1000)break;}
+  if(state.user?.id!==loadingUser||V5.account!==loadingUser)return;
   V5.collections=a.data||[];V5.items=items;v5ReindexItems();V5.ready=true;V5.warning='';
- }catch(e){V5.ready=false;V5.warning=e.message||'To‘plamlarni yuklab bo‘lmadi.';}
- finally{V5.loading=false;}
+ }catch(e){if(state.user?.id===loadingUser&&V5.account===loadingUser){V5.ready=false;V5.warning=e.message||'To‘plamlarni yuklab bo‘lmadi.';}}
+ finally{if(state.user?.id===loadingUser&&V5.account===loadingUser)V5.loading=false;}
 }
 const v5EarlierLoad=loadCore;
 loadCore=async function(){await v5EarlierLoad();await v5Load();};

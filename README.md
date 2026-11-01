@@ -1,3 +1,7 @@
+# Wordora 7.7
+
+Hisoblararo asinxron yuklash himoyasi, xavfsiz offline ma’lumot tozalash va o‘qish rejimidagi Supabase audit skripti: [`UPGRADE_7_7_UZ.md`](UPGRADE_7_7_UZ.md).
+
 # Wordora 4.0
 
 So‘z yodlashning uch bosqichli oqimi, talaffuz, vizual xotira ishoralari, sana bo‘yicha mashqlar, 90% mezonli testlar va takrorlash tizimi.
