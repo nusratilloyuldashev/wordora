@@ -72,7 +72,15 @@ test('dashboard appends goal panel without removing 7.5 review calendar',()=>{
   assert.match(html,/data-v76="learn"/);
   assert.match(html,/data-v76="review"/);
   assert.doesNotMatch(html,/<script>alert/);
+});
+
+test('untrusted dictionary content is HTML-escaped in review priorities',()=>{
+  const {context}=sandbox();
+  context.V4.memory['3'].stage='learning';
+  const html=context.dashboardPage();
+  assert.doesNotMatch(html,/<script>alert/);
   assert.match(html,/&lt;script&gt;/);
+  assert.match(html,/&lt;img src=x&gt;/);
 });
 
 test('changing goal updates only that account local preference',()=>{
