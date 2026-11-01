@@ -4,8 +4,10 @@ const OF=window.WordoraOffline;
 const v7BaseFetch=v4Fetch;
 v4Fetch=async function(){
  if(!state.user)return;
+ const loadingUser=state.user.id;
  if(OF.isOffline()){
-  const rows=await OF.read('learning');
+  const rows=await OF.read('learning',loadingUser);
+  if(state.user?.id!==loadingUser||OF.account()!==loadingUser)return;
   if(!Array.isArray(rows)){V4.ready=false;V4.announce='Offline o‘rganish tarixi oldindan yuklanmagan.';return;}
   if(V4.activeAccount!==state.user.id){V4.lesson=null;V4.exam=null;V4.activeAccount=state.user.id;}
   v4Set(rows);V4.ready=true;V4.unavailable=false;V4.announce='';
@@ -16,6 +18,7 @@ v4Fetch=async function(){
   return;
  }
  await v7BaseFetch();
+ if(state.user?.id!==loadingUser||OF.account()!==loadingUser)return;
  if(V4.ready){
   await OF.store('learning',Object.values(V4.memory)).catch(console.warn);
  }else if(OF.networkError(V4.announce||'')){
@@ -27,8 +30,10 @@ v4Fetch=async function(){
 const v7BaseCollections=v5Load;
 v5Load=async function(){
  if(!state.user)return;
+ const loadingUser=state.user.id;
  if(OF.isOffline()){
-  const cached=await OF.read('collections');
+  const cached=await OF.read('collections',loadingUser);
+  if(state.user?.id!==loadingUser||OF.account()!==loadingUser)return;
   if(cached){
    V5.account=state.user.id;V5.collections=cached.collections||[];V5.items=cached.items||[];v5ReindexItems();
    V5.ready=true;V5.warning='';V5.loading=false;return;
@@ -36,6 +41,7 @@ v5Load=async function(){
   V5.ready=false;V5.warning='Unitlar offline yuklanmagan.';return;
  }
  await v7BaseCollections();
+ if(state.user?.id!==loadingUser||OF.account()!==loadingUser)return;
  if(V5.ready){
   await OF.store('collections',{collections:V5.collections,items:V5.items}).catch(console.warn);
  }else if(OF.networkError(V5.warning||'')){
@@ -141,7 +147,7 @@ function offlineIndicator(){
   <span>${off?'📴 Offline rejim':info.ready?'✅ Offline uchun tayyor':'📥 Offline ma’lumot yuklanmoqda'}</span>
   <span>${info.conflicts?`⚠️ ${info.conflicts} ta test konflikti — serverdagi yangi natija saqlandi`:window.WordoraBackend.reviewProtocol==='legacy-migration-required'?'⚠️ Supabase upgrade_7_3.sql kerak':info.lastErrorCode==='exam-sql-upgrade-required'?'⚠️ Supabase upgrade_7_4.sql kerak':info.pending?`${info.pending} ta yuborilmagan natija`:'So‘zlar qurilmada saqlanadi'}</span>
   <span class="v74-sync-time" title="Oxirgi muvaffaqiyatli yuborilgan amal">🕒 Oxirgi sinxronlash: ${when}</span>
-  <div class="wordora-offline-actions">${off?'':`<button data-offline="prepare">⬇️ Offline uchun yuklash</button>${info.pending?'<button data-offline="sync">🔄 Sinxronlash</button>':''}${info.conflicts?'<button data-offline="resolve" class="v74-conflict-button">⚠️ Konfliktni hal qilish</button>':''}`}<button data-offline="install">📲 Telefonga o‘rnatish</button><button data-offline="help" aria-label="Offline yordam">ⓘ</button></div>
+  <div class="wordora-offline-actions">${off?'':`<button data-offline="prepare">⬇️ Offline uchun yuklash</button>${info.pending?'<button data-offline="sync">🔄 Sinxronlash</button>':''}${info.conflicts?'<button data-offline="resolve" class="v74-conflict-button">⚠️ Konfliktni hal qilish</button>':''}`}<button data-offline="install">📲 Telefonga o‘rnatish</button><button data-offline="clear">🧹 Offline nusxalarni tozalash</button><button data-offline="help" aria-label="Offline yordam">ⓘ</button></div>
  </div>`;
 }
 render=function(){
@@ -177,6 +183,29 @@ document.addEventListener('click',async e=>{
  e.preventDefault();e.stopImmediatePropagation();
  const action=b.dataset.offline;
  if(action==='help')return toast('Internetda bir marta kirib “Offline uchun yuklash”ni bosing. Offline mashq va test natijalari internet qaytgach yuboriladi.','success');
+ if(action==='clear'){
+  let status;
+  try{status=await OF.syncStatus();}
+  catch(err){toast('Offline navbatni tekshirib bo‘lmadi: '+err.message);return;}
+  if(status.pending){
+   toast('Avval '+status.pending+' ta yuborilmagan natijani sinxronlang. Ma’lumotlar saqlab qolindi.');
+   return;
+  }
+  const accepted=window.confirm('Shu hisobning qurilmadagi offline nusxalari va tugallanmagan mashg‘uloti o‘chadi. Supabase bazasidagi natijalar saqlanadi. Davom etasizmi?');
+  if(!accepted)return;
+  b.disabled=true;
+  const userId=state.user?.id;
+  try{
+   const cleared=await OF.clearOfflineCopies();
+   if(state.user?.id!==userId||cleared.userId!==userId)return;
+   try{localStorage.removeItem('wordora-lesson-v4-'+userId);}catch{}
+   V4.lesson=null;V4.exam=null;
+   await refreshStatus();
+   toast(cleared.cleared+' ta offline nusxa o‘chirildi. Qayta offline ishlatishdan oldin yuklab oling.','success');
+  }catch(err){toast(err.message);}
+  finally{b.disabled=false;}
+  return;
+ }
  if(action==='install'){
   if(offlineInstallPrompt){offlineInstallPrompt.prompt();await offlineInstallPrompt.userChoice;offlineInstallPrompt=null;}
   else toast('Android: Chrome → ⋮ → Bosh ekranga qo‘shish. iPhone: Safari → Share → Add to Home Screen.','success');

@@ -114,5 +114,5 @@ test('v7.3 idempotent API falls back ONLY when the new RPC is missing',()=>{
  assert.match(api,/result\.error\.code!=='PGRST202'/);
  assert.match(api,/reviewProtocol='idempotent-v2'/);
  assert.match(api,/reviewProtocol='legacy-migration-required'/);
- assert.match(file('src/service-worker.js'),/wordora-pwa-7\.6\.0/);
+ assert.match(file('src/service-worker.js'),/wordora-pwa-7\.7\.0/);
 });

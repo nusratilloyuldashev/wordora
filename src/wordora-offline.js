@@ -43,13 +43,16 @@
  }
  const account=()=>activeUser?.id||null;
  const key=name=>account()+':'+name;
- async function store(name,data){
-  if(!account())return;
-  await operation('snapshots','put',{key:key(name),data,updatedAt:Date.now()});
+ async function store(name,data,requestedUser=account()){
+  if(!requestedUser||requestedUser!==account())return false;
+  // Pin the owner BEFORE IndexedDB work. Never relabel an old account's response.
+  await operation('snapshots','put',{key:requestedUser+':'+name,data,updatedAt:Date.now()});
+  return requestedUser===account();
  }
- async function read(name){
-  if(!account())return null;
-  return (await operation('snapshots','get',key(name)))?.data??null;
+ async function read(name,requestedUser=account()){
+  if(!requestedUser||requestedUser!==account())return null;
+  const row=await operation('snapshots','get',requestedUser+':'+name);
+  return requestedUser===account()?row?.data??null:null;
  }
  async function pending(){
   const records=await operation('outbox','all');
@@ -63,6 +66,49 @@
   await operation('outbox','put',record);
   notify();
   return record;
+ }
+
+ // Atomic account-only cleanup: pending operations and cached snapshots are
+ // checked within ONE readwrite transaction to protect unsent answers from races.
+ async function clearOfflineCopies(){
+  const userId=account();
+  if(!userId)throw Error('Avval hisobga kiring.');
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+   let count=0,rejection=null,settled=false,tx;
+   const finish=(error)=>{
+    if(settled)return;
+    settled=true;db.close();
+    if(error)reject(error);else resolve({cleared:count,userId});
+   };
+   try{tx=db.transaction(['outbox','snapshots'],'readwrite');}
+   catch(err){finish(err);return;}
+   tx.oncomplete=()=>finish(null);
+   tx.onabort=()=>finish(rejection||tx.error||Error('Offline nusxalarni tozalab bo‘lmadi.'));
+   tx.onerror=()=>{rejection=tx.error||Error('IndexedDB xatoligi.');};
+   const waiting=tx.objectStore('outbox').openCursor();
+   waiting.onerror=()=>{rejection=waiting.error||Error('Offline navbatni tekshirib bo‘lmadi.');tx.abort();};
+   waiting.onsuccess=()=>{
+    const item=waiting.result;
+    if(item){
+     if(item.value?.userId===userId){
+      rejection=Error('Avval yuborilmagan offline natijalarni sinxronlang. Navbat saqlandi.');
+      tx.abort();return;
+     }
+     item.continue();return;
+    }
+    const list=tx.objectStore('snapshots').openCursor();
+    list.onerror=()=>{rejection=list.error||Error('Offline nusxalarni o‘qib bo‘lmadi.');tx.abort();};
+    list.onsuccess=()=>{
+     const row=list.result;
+     if(!row)return;
+     if(typeof row.key==='string'&&row.key.startsWith(userId+':')){
+      row.delete();count++;
+     }
+     row.continue();
+    };
+   };
+  });
  }
  function remember(user){
   if(!user?.id)return;
@@ -89,7 +135,11 @@
   try{
    const {data,error}=await backend.client.auth.getUser();
    if(error||!data?.user||data.user.id!==account())return {synced:0,needsLogin:true};
+   // Verified network recovery also counts when the queue is empty.
+   networkFailed=false;
+   const syncingUser=data.user.id;
    for(const item of await pending()){
+    if(account()!==syncingUser)break;
     if(item.userId!==data.user.id)break;
     if(item.conflict){conflicts++;continue;}
     try{
@@ -191,12 +241,17 @@
   for(const item of items)await operation('outbox','delete',item.id);
   notify();return items.length;
  }
- const bridge={remember,remembered,restore,forget,account,store,read,pending,enqueue,sync,syncStatus,resolveConflicts,prepare,
+ const bridge={remember,remembered,restore,forget,account,store,read,pending,enqueue,sync,syncStatus,resolveConflicts,prepare,clearOfflineCopies,
   isOffline,online,networkError,noteFailure,refreshData:async()=>{}};
  window.WordoraOffline=bridge;
  backend.api=async function(path,opts={}){
   const method=opts.method||'GET';
   const snapshot=path.startsWith('/words?')||path==='/words'&&method==='GET'?'words':path==='/stats'?'stats':null;
+  const requestUser=snapshot?account():null;
+  const assertAccount=()=>{
+   if(snapshot&&(!requestUser||requestUser!==account()))
+    throw Error('Hisob almashdi. Ma’lumotlarni yangi hisobda qayta yuklang.');
+  };
   if(method==='POST'&&path==='/reviews'){
    // Write-ahead outbox: an uncertain server acknowledgement cannot lose the
    // answer. Replays use the SAME request_id and become exactly-once after
@@ -218,18 +273,30 @@
   }
   if(method!=='GET'&&!online())throw Error('Bu amal internet talab qiladi. Offline rejimda yodlash, mashqlar va test ishlaydi.');
   if(snapshot&&!online()){
-   const data=await read(snapshot);
+   assertAccount();
+   const data=await read(snapshot,requestUser);
+   assertAccount();
    if(data===null)throw Error('Offline so‘zlar yuklanmagan. Internetda bir marta tizimga kiring.');
    return data;
   }
   try{
    const data=await originalApi(path,opts);
-   if(snapshot){await store(snapshot,data).catch(console.warn);networkFailed=false;}
+   if(snapshot){
+    assertAccount();
+    await store(snapshot,data,requestUser).catch(console.warn);
+    assertAccount();
+    networkFailed=false;
+   }
    return data;
   }catch(e){
+   assertAccount();
    if(networkError(e)){
     noteFailure(e);
-    if(snapshot){const data=await read(snapshot);if(data!==null)return data;}
+    if(snapshot){
+     const data=await read(snapshot,requestUser);
+     assertAccount();
+     if(data!==null)return data;
+    }
    }
    throw e;
   }
