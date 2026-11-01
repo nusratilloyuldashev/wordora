@@ -1,7 +1,7 @@
 // Wordora local Supabase Auth+PostgREST+RLS+RPC integrated load test.
 // This NEVER connects to hosted Supabase. Local API_URL must be loopback.
 // Uses 500 real LOCAL Auth accounts and real JWTs, not fabricated auth.uid().
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {createClient} from '@supabase/supabase-js';
 
@@ -296,6 +296,7 @@ try{
   completedAllStages:completedAll,integrity,expected,actual:totals,
   totalMs:Math.round(performance.now()-runStart),testedAt:new Date().toISOString()
  };
+ if(process.env.WORDORA_LOCAL_REPORT_FILE)writeFileSync(process.env.WORDORA_LOCAL_REPORT_FILE,JSON.stringify(summary,null,2)+'\n',{mode:0o600});
  console.log('WORDORA_LOCAL_SUPABASE_FINAL_BEGIN');
  console.log(JSON.stringify(summary,null,2));
  console.log('WORDORA_LOCAL_SUPABASE_FINAL_END');

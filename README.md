@@ -1,3 +1,7 @@
+# Wordora 7.9
+
+Mahalliy yuklama va reliz mezonlari: [UPGRADE_7_9_UZ.md](UPGRADE_7_9_UZ.md).
+
 # Wordora 7.8
 
 Unit bo‘yicha yangi o‘quv paneli, mobil mashq tugmalari va filtrlarni tezkor ulash: [`UPGRADE_7_8_UZ.md`](UPGRADE_7_8_UZ.md).

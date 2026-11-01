@@ -122,7 +122,7 @@ test('no extra network, RPC or database writes and cloud security headers are pa
   assert.match(index,/wordora-v76\.css/);
   assert.match(worker,/wordora-v76\.js/);
   assert.match(worker,/wordora-v76\.css/);
-  assert.match(worker,/wordora-pwa-7\.8\.0/);
-  assert.equal(JSON.parse(read('package.json')).version,'7.8.0');
+  assert.match(worker,/wordora-pwa-7\.9\.0/);
+  assert.equal(JSON.parse(read('package.json')).version,'7.9.0');
   new Function(script);
 });

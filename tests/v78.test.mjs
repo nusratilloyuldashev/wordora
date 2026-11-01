@@ -97,6 +97,6 @@ test('7.8 is included in PWA and preview build',()=>{
  const html=read('src/index.html'),sw=read('src/service-worker.js');
  assert.match(html,/wordora-v78\.js/);assert.match(html,/wordora-v78\.css/);
  assert.match(sw,/wordora-v78\.js/);assert.match(sw,/wordora-v78\.css/);
- assert.match(sw,/wordora-pwa-7\.8\.0/);
- assert.equal(JSON.parse(read('package.json')).version,'7.8.0');
+ assert.match(sw,/wordora-pwa-7\.9\.0/);
+ assert.equal(JSON.parse(read('package.json')).version,'7.9.0');
 });
