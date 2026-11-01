@@ -1,3 +1,7 @@
+# Wordora 7.8
+
+Unit bo‘yicha yangi o‘quv paneli, mobil mashq tugmalari va filtrlarni tezkor ulash: [`UPGRADE_7_8_UZ.md`](UPGRADE_7_8_UZ.md).
+
 # Wordora 7.7
 
 Hisoblararo asinxron yuklash himoyasi, xavfsiz offline ma’lumot tozalash va o‘qish rejimidagi Supabase audit skripti: [`UPGRADE_7_7_UZ.md`](UPGRADE_7_7_UZ.md).
