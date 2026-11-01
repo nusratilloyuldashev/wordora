@@ -68,7 +68,7 @@ test('7.7 release retains 90 percent mastery and CSP baseline',()=>{
  assert.match(headers,/object-src 'none'/);
  assert.match(headers,/base-uri 'self'/);
  assert.match(headers,/form-action 'self'/);
- assert.match(read('src/wordora-v7.js'),/version:'7\.8'/);
+ assert.match(read('src/wordora-v7.js'),/version:'7\.9'/);
 });
 
 function fakeDB(stores) {
