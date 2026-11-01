@@ -1,21 +1,21 @@
-name: Wordora 7.5 dashboard tests and preview build
+name: Wordora 7.6 regression tests and preview build
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/wordora-7-6']
     paths:
       - '.github/workflows/wordora-ui-75.yml'
-      - 'src/wordora-v75.js'
-      - 'src/wordora-v75.css'
-      - 'tests/v75.test.mjs'
-      - 'src/index.html'
-      - 'src/service-worker.js'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  ui-75:
+  regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
     steps:
       - name: Checkout Wordora
         uses: actions/checkout@v4
@@ -27,14 +27,16 @@ jobs:
         run: npm test
       - name: Build Wordora preview without production credentials
         run: npm run build:preview
-      - name: Verify new PWA assets exist
+      - name: Verify 7.6 PWA and security files
         shell: bash
         run: |
           set -euo pipefail
           test -s dist/index.html
-          test -s dist/wordora-v75.js
-          test -s dist/wordora-v75.css
+          test -s dist/wordora-v76.js
+          test -s dist/wordora-v76.css
+          test -s dist/_headers
           test -s dist/service-worker.js
-          grep -q 'wordora-v75.js' dist/index.html
-          grep -q 'wordora-pwa-7.5.0' dist/service-worker.js
-          echo 'Wordora 7.5 assets verified.'
+          grep -q 'wordora-v76.js' dist/index.html
+          grep -q 'wordora-pwa-7.6.0' dist/service-worker.js
+          grep -q 'X-Frame-Options: DENY' dist/_headers
+          echo 'Wordora 7.6 assets verified.'

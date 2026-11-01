@@ -114,11 +114,11 @@ test('Wordora 7.5 PWA includes new dashboard scripts and styles',()=>{
  const index=read('src/index.html');
  const worker=read('src/service-worker.js');
  const pkg=JSON.parse(read('package.json'));
- assert.equal(pkg.version,'7.5.0');
+ assert.equal(pkg.version,'7.6.0');
  assert.match(index,/wordora-v75\.js/);
  assert.match(index,/wordora-v75\.css/);
  assert.match(worker,/wordora-v75\.js/);
  assert.match(worker,/wordora-v75\.css/);
- assert.match(worker,/wordora-pwa-7\.5\.0/);
+ assert.match(worker,/wordora-pwa-7\.6\.0/);
  new Function(read('src/wordora-v75.js'));
 });
