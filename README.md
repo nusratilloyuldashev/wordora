@@ -1,3 +1,7 @@
+# Wordora 8.0 — reliz auditi
+
+2026-11-01 mahalliy yuklama dalillari va ommaviy relizga ruxsat shartlari: [RELEASE_8_0_AUDIT_UZ.md](RELEASE_8_0_AUDIT_UZ.md).
+
 # Wordora 7.9
 
 Mahalliy yuklama va reliz mezonlari: [UPGRADE_7_9_UZ.md](UPGRADE_7_9_UZ.md).
