@@ -8,7 +8,7 @@ const ASSETS=[
  '/icons/icon-192.png','/icons/icon-512.png',
  '/styles.css','/wordora-v3.css','/wordora-v4.css','/wordora-v5.css','/wordora-v6.css','/wordora-offline.css','/wordora-v7.css','/wordora-v75.css','/wordora-v76.css','/wordora-v78.css',
  '/supabase-api.js','/wordora-offline.js','/app.js',
- '/wordora-v3.js','/wordora-v4.js','/wordora-v5.js','/wordora-v6.js','/wordora-offline-bridge.js','/wordora-v7.js','/wordora-v74.js','/wordora-v75.js','/wordora-v76.js','/wordora-v78.js','/wordora-v76.js'
+ '/wordora-v3.js','/wordora-v4.js','/wordora-v5.js','/wordora-v6.js','/wordora-offline-bridge.js','/wordora-v7.js','/wordora-v74.js','/wordora-v75.js','/wordora-v76.js','/wordora-v78.js'
 ];
 async function cacheShell(){
  const cache=await caches.open(SHELL);
