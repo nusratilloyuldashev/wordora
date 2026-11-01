@@ -1,0 +1,32 @@
+/* Wordora 7.5 — learner-focused dashboard plan and Unit mastery cards. */
+.v75-dashboard,.v75-units{margin:20px 0 24px;padding:24px;border:1px solid #e9e5f8;border-radius:22px;background:#fff;box-shadow:0 10px 30px rgba(64,48,133,.035)}
+.v75-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:18px}
+.v75-eyebrow{font-size:10px;font-weight:900;letter-spacing:1px;color:#887cba}
+.v75-heading h2{font-size:21px;color:#292448;letter-spacing:-.5px;margin:4px 0 6px}
+.v75-heading p{color:#817a9e;margin:0;font-size:12px}
+.v75-total{display:flex;align-items:center;gap:9px;padding:10px 14px;background:#f3f0ff;border-radius:15px;color:#6651ca}
+.v75-total b{font-size:25px;line-height:1}
+.v75-total small{max-width:116px;line-height:1.4;font-size:11px;font-weight:700}
+.v75-calendar{display:grid;grid-template-columns:repeat(7,minmax(55px,1fr));gap:8px}
+.v75-day{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:9px;padding:10px 5px;border-radius:12px;background:#f8f7fd;color:#716b88;min-height:150px}
+.v75-day.today{background:#eeeaff;color:#6150b6}
+.v75-day strong{font-size:11px;white-space:nowrap}
+.v75-day span{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums}
+.v75-day-track{height:76px;width:20px;background:#e9e5f5;border-radius:9px;overflow:hidden;display:flex;align-items:flex-end}
+.v75-day-track i{width:100%;display:block;background:#9278f3;border-radius:9px 9px 0 0;min-height:0;transition:height .2s}
+.v75-day.today .v75-day-track i{background:#7251e8}
+.v75-plan-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px;font-size:12px;color:#77718e}
+.v75-plan-foot button,.v75-all-units{border:1px solid #dcd4ff;background:#f3f0ff;color:#6c50d6;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:800;cursor:pointer;min-height:42px}
+.v75-plan-foot button:hover,.v75-all-units:hover{background:#e9e3ff}
+.v75-unit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.v75-unit-card{display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:8px;border:1px solid #e9e5f8;border-radius:17px;padding:16px;background:#fdfcff;min-width:0;cursor:pointer;color:#312d4e}
+.v75-unit-card:hover,.v75-unit-card:focus-visible{border-color:#a493f3;box-shadow:0 7px 16px rgba(101,68,206,.08)}
+.v75-unit-name{font-weight:850;font-size:13px;overflow-wrap:anywhere;min-height:17px}
+.v75-unit-metric{font-size:11px;color:#7f769c}
+.v75-unit-metric b{color:#7051d6;font-size:22px}
+.v75-progress-track{height:7px;background:#eae6f7;border-radius:9px;overflow:hidden}
+.v75-progress-track i{height:100%;display:block;background:#8063ee;border-radius:9px}
+.v75-unit-foot{font-size:10px;line-height:1.5;color:#77718b}
+.v75-unit-open{font-size:11px;font-weight:800;color:#6d52d5}
+.v75-all-units{margin-top:13px;width:100%}
+@media(max-width:670px){.v75-dashboard,.v75-units{padding:16px;margin:15px 0}.v75-heading h2{font-size:18px}.v75-calendar{gap:4px}.v75-day{padding:8px 2px;min-height:128px;gap:7px}.v75-day strong{font-size:9px}.v75-day-track{height:60px;width:15px}.v75-unit-grid{grid-template-columns:1fr}.v75-plan-foot button{width:100%}}

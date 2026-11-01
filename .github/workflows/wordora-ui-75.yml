@@ -1,0 +1,40 @@
+name: Wordora 7.5 dashboard tests and preview build
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wordora-ui-75.yml'
+      - 'src/wordora-v75.js'
+      - 'src/wordora-v75.css'
+      - 'tests/v75.test.mjs'
+      - 'src/index.html'
+      - 'src/service-worker.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ui-75:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout Wordora
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run full automated JS regression suite
+        run: npm test
+      - name: Build Wordora preview without production credentials
+        run: npm run build:preview
+      - name: Verify new PWA assets exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -s dist/wordora-v75.js
+          test -s dist/wordora-v75.css
+          test -s dist/service-worker.js
+          grep -q 'wordora-v75.js' dist/index.html
+          grep -q 'wordora-pwa-7.5.0' dist/service-worker.js
+          echo 'Wordora 7.5 assets verified.'

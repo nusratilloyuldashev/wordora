@@ -133,7 +133,7 @@ test('client exposes account-scoped diagnostics and caches 7.4 exam code for off
  const index=read('src/index.html'),worker=read('src/service-worker.js');
  const diagnostics=read('src/wordora-v7.js');
  assert.match(index,/wordora-v74\.js/);
- assert.match(worker,/wordora-pwa-7\.4\.0/);
+ assert.match(worker,/wordora-pwa-7\.5\.0/);
  assert.match(worker,/wordora-v74\.js/);
  assert.match(diagnostics,/conflictedExams/);
  assert.match(diagnostics,/lastSyncedAt/);
