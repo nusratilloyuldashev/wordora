@@ -10,3 +10,9 @@
 .wordora-offline-banner strong{font-size:13px}
 .wordora-offline-banner .wordora-pending{color:#9c5d20;font-weight:800}
 @media(max-width:630px){.wordora-offline-banner{margin:8px 12px;padding:11px 13px;border-radius:13px;font-size:11px;flex-direction:column;align-items:stretch}.wordora-offline-banner .wordora-offline-actions{justify-content:space-between}.wordora-offline-banner button{flex:1}}
+
+/* Wordora 7.4: visibility for conflicts and last successful sync */
+.wordora-offline-banner .v74-sync-time{font-weight:650;opacity:.83;font-size:11px;white-space:nowrap}
+.wordora-offline-banner .v74-conflict-button{color:#9b3b26;border-color:#c27966;background:#fff6f2}
+.v74-exam-conflict{margin:14px 0;padding:13px 16px;border:1px solid #e1bfa6;border-radius:12px;background:#fff7ec;color:#854921;font-weight:680;line-height:1.55}
+@media(max-width:630px){.wordora-offline-banner .v74-sync-time{white-space:normal}}

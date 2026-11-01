@@ -85,12 +85,13 @@
  function noteFailure(e){if(networkError(e))networkFailed=true;notify();}
  async function sync(){
   if(syncing||!online()||!account())return {synced:0};
-  syncing=true;let done=0;
+  syncing=true;let done=0,conflicts=0;
   try{
    const {data,error}=await backend.client.auth.getUser();
    if(error||!data?.user||data.user.id!==account())return {synced:0,needsLogin:true};
    for(const item of await pending()){
     if(item.userId!==data.user.id)break;
+    if(item.conflict){conflicts++;continue;}
     try{
      let response;
      if(item.type==='review'){
@@ -108,16 +109,46 @@
      }else if(item.type==='learning-update'){
       const {wordId,fields}=item.payload;
       response=await backend.client.from('word_learning').update(fields).eq('user_id',data.user.id).eq('word_id',wordId);
-     }else if(item.type==='exam'){
-      response=await backend.client.from('word_learning').upsert(item.payload,{onConflict:'user_id,word_id'});
+     }else if(item.type==='exam'||item.type==='exam-v74'){
+      // Legacy offline exams had no observed server version. Safely require an
+      // empty previous tested_at instead of silently replacing another device.
+      if(item.type==='exam'){
+       const oldId=item.id;
+       const upgraded={...item,id:isUUID(oldId)?oldId:newRequestId(),
+        type:'exam-v74',payload:{rows:item.payload.map(x=>({
+         ...x,expected_tested_at:null
+        }))}};
+       await operation('outbox','put',upgraded);
+       if(upgraded.id!==oldId)await operation('outbox','delete',oldId);
+       Object.assign(item,upgraded);
+      }
+      response=await backend.client.rpc('wordora_save_exam_v74',{
+       p_request_id:item.id,p_items:item.payload.rows
+      });
+      if(!response.error&&response.data?.conflict){
+       item.conflict={wordIds:response.data.word_ids||[],at:new Date().toISOString()};
+       await operation('outbox','put',item);
+       conflicts++;notify();
+       continue;
+      }
+      if(!response.error&&response.data?.ok!==true)
+       throw Error('Test tasdiqlanmadi, natija navbatda qoldi.');
      }else throw Error('Noma’lum offline amal: '+item.type);
      if(response.error)throw response.error;
      await operation('outbox','delete',item.id);
      done++;
-    }catch(e){if(networkError(e))noteFailure(e);console.warn('Offline sync failed:',e);break;}
+    }catch(e){
+     if(networkError(e))noteFailure(e);
+     await recordError(e.code==='PGRST202'?'exam-sql-upgrade-required':networkError(e)?'network':'sync-rejected');
+     console.warn('Offline sync failed:',e);break;
+    }
    }
-   if(done)networkFailed=false;
-   return {synced:done,remaining:(await pending()).length};
+   if(done){
+    networkFailed=false;
+    const meta=await read('sync-meta')||{};
+    await store('sync-meta',{...meta,lastSyncedAt:new Date().toISOString(),lastErrorCode:null});
+   }
+   return {synced:done,conflicts,remaining:(await pending()).length};
   }finally{syncing=false;notify();}
  }
  async function prepare(){
@@ -138,7 +169,29 @@
   await store('pwa-ready',{prepared:true,version:1});
   networkFailed=false;notify();
  }
- const bridge={remember,remembered,restore,forget,account,store,read,pending,enqueue,sync,prepare,
+ async function syncStatus(){
+  const [items,meta]=await Promise.all([pending(),read('sync-meta')]);
+  return {pending:items.length,conflicts:items.filter(x=>x.conflict).length,
+   lastSyncedAt:meta?.lastSyncedAt||null,lastErrorCode:meta?.lastErrorCode||null};
+ }
+ async function recordError(code){
+  try{
+   const meta=await read('sync-meta')||{};
+   await store('sync-meta',{...meta,lastErrorCode:String(code).slice(0,48)});
+  }catch{}
+ }
+ async function resolveConflicts(){
+  const items=(await pending()).filter(x=>x.type==='exam-v74'&&x.conflict);
+  if(!items.length)return 0;
+  // Archive before deleting. No conflicting result is discarded silently.
+  const archive=await read('exam-conflict-archive')||[];
+  await store('exam-conflict-archive',[...archive,...items.map(x=>({
+   at:x.at,rows:x.payload.rows,conflict:x.conflict
+  }))].slice(-30));
+  for(const item of items)await operation('outbox','delete',item.id);
+  notify();return items.length;
+ }
+ const bridge={remember,remembered,restore,forget,account,store,read,pending,enqueue,sync,syncStatus,resolveConflicts,prepare,
   isOffline,online,networkError,noteFailure,refreshData:async()=>{}};
  window.WordoraOffline=bridge;
  backend.api=async function(path,opts={}){

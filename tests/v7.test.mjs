@@ -83,7 +83,7 @@ test('all write paths invalidate their cached account snapshot',()=>{
 });
 test('PWA pre-caches the latest JS and CSS, and keeps old word-learning mastery',()=>{
  const html=read('src/index.html'),worker=read('src/service-worker.js'),v4=read('src/wordora-v4.js');
- assert.match(worker,/wordora-pwa-7\.3\.0/);
+ assert.match(worker,/wordora-pwa-7\.4\.0/);
  assert.match(worker,/wordora-v7\.js/);
  assert.match(worker,/wordora-v7\.css/);
  assert.match(html,/wordora-v7\.js/);
@@ -147,5 +147,5 @@ test('7.1 avoids blind production DDL and ships read-only database diagnostics',
  const commands=diagnostic.split('\n').map(line=>line.replace(/--.*$/,'').trim()).filter(Boolean);
  assert.ok(commands.filter(x=>/^select\b/i.test(x)).length>=4);
  assert.ok(!commands.some(x=>/^(insert|update|delete|drop|alter|create|truncate|grant|revoke)\b/i.test(x)));
- assert.match(read('src/wordora-v4.js'),/v7-version">v7\.3/);
+ assert.match(read('src/wordora-v4.js'),/v7-version">v7\.4/);
 });

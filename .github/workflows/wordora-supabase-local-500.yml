@@ -6,6 +6,7 @@ on:
       - '.github/workflows/wordora-supabase-local-500.yml'
       - 'scripts/wordora-local-supabase-500.mjs'
       - 'supabase/upgrade_7_3.sql'
+      - 'supabase/upgrade_7_4.sql'
   workflow_dispatch:
 permissions:
   contents: read
@@ -46,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in supabase/setup.sql supabase/upgrade_3_0.sql supabase/upgrade_4_0.sql supabase/upgrade_5_0.sql supabase/upgrade_7_3.sql; do
+          for f in supabase/setup.sql supabase/upgrade_3_0.sql supabase/upgrade_4_0.sql supabase/upgrade_5_0.sql supabase/upgrade_7_3.sql supabase/upgrade_7_4.sql; do
             echo "Applying local $f"
             psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres -f "$f" > "$RUNNER_TEMP/wordora-sql-apply.log"
           done

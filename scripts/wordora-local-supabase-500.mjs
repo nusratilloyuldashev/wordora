@@ -161,15 +161,50 @@ try{
      }
     }
 
-    const exam=await op('exam_95_write',()=>api.from('word_learning')
-      .update({stage:'mastered',last_test_score:95,tested_at:new Date().toISOString()})
-      .eq('user_id',person.id).in('word_id',five).select('word_id'));
-    if(exam.length!==5)throw Error('Exam result count incorrect');
+    const snapshot=await op('exam_prior_versions',()=>api.from('word_learning')
+      .select('word_id,tested_at').eq('user_id',person.id).in('word_id',five));
+    if(snapshot.length!==5)throw Error('Missing introduced words for test');
+    const observed=new Map(snapshot.map(x=>[String(x.word_id),x.tested_at]));
+    const testedAt=new Date().toISOString();
+    const examRows=five.map(id=>({
+      word_id:id,stage:'mastered',next_review_on:new Date(Date.now()+86400000).toISOString().slice(0,10),
+      review_interval:1,last_test_score:95,tested_at:testedAt,
+      expected_tested_at:observed.get(String(id))??null
+    }));
+    const examId=randomUUID();
+    const exam=await op('exam_v74_write',()=>api.rpc('wordora_save_exam_v74',{
+      p_request_id:examId,p_items:examRows
+    }));
+    if(exam?.ok!==true||exam?.saved!==5||exam?.deduplicated!==false)
+     throw Error('Atomic exam RPC did not save 5 words');
+    const again=await op('exam_v74_retry',()=>api.rpc('wordora_save_exam_v74',{
+      p_request_id:examId,p_items:examRows
+    }));
+    if(again?.ok!==true||again?.deduplicated!==true)
+     throw Error('Retry of identical exam duplicated the write');
+    if(i===0){
+     const changedId=await api.rpc('wordora_save_exam_v74',{
+      p_request_id:examId,p_items:examRows.map(row=>({...row,last_test_score:92}))
+     });
+     if(!changedId.error||changedId.error.code!=='22023')
+      throw Error('Exam reused same request ID with modified payload');
+     // The first word is intentionally stale, the second was observed at the
+     // latest timestamp. NONE may be changed when a batch contains a conflict.
+     const staleRows=examRows.map((row,j)=>({
+      ...row,last_test_score:91,
+      expected_tested_at:j===0?row.expected_tested_at:testedAt
+     }));
+     const stale=await api.rpc('wordora_save_exam_v74',{
+      p_request_id:randomUUID(),p_items:staleRows
+     });
+     if(stale.error||stale.data?.conflict!==true||stale.data?.ok!==false)
+      throw Error('Stale cross-device exam was not rejected atomically');
+    }
     const verified=await op('exam_read_back',()=>api.from('word_learning')
-      .select('word_id,stage,last_test_score')
+      .select('word_id,stage,last_test_score,tested_at')
       .eq('user_id',person.id).in('word_id',five));
     if(verified.length!==5||verified.some(x=>x.stage!=='mastered'||x.last_test_score!==95))
-     throw Error('Saved 95% exam result not found');
+     throw Error('Saved exam was lost or partially overwritten');
 
     if(i===0||i===stage.users-1){
      const other=students[i===0?stage.users-1:0];

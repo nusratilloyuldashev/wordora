@@ -1,6 +1,6 @@
 /* Wordora PWA service worker. App shell only; NEVER cache Supabase requests. */
 'use strict';
-const VERSION='wordora-pwa-7.3.0';
+const VERSION='wordora-pwa-7.4.0';
 const SHELL=VERSION+'-shell';
 const CDN='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.2';
 const ASSETS=[
@@ -8,7 +8,7 @@ const ASSETS=[
  '/icons/icon-192.png','/icons/icon-512.png',
  '/styles.css','/wordora-v3.css','/wordora-v4.css','/wordora-v5.css','/wordora-v6.css','/wordora-offline.css','/wordora-v7.css',
  '/supabase-api.js','/wordora-offline.js','/app.js',
- '/wordora-v3.js','/wordora-v4.js','/wordora-v5.js','/wordora-v6.js','/wordora-offline-bridge.js','/wordora-v7.js'
+ '/wordora-v3.js','/wordora-v4.js','/wordora-v5.js','/wordora-v6.js','/wordora-offline-bridge.js','/wordora-v7.js','/wordora-v74.js'
 ];
 async function cacheShell(){
  const cache=await caches.open(SHELL);

@@ -70,10 +70,11 @@ window.WordoraV7=perfApi;
 // Local diagnostics only: no personal data or telemetry sent to a third party.
 window.WordoraDiagnostics={
  async status(){
-  const queued=await window.WordoraOffline?.pending?.().catch(()=>[]);
+  const sync=await window.WordoraOffline?.syncStatus?.().catch(()=>null);
   return {
-   version:'7.3',reviewProtocol:window.WordoraBackend?.reviewProtocol||'unknown',
-   pendingOperations:Array.isArray(queued)?queued.length:0,
+   version:'7.4',reviewProtocol:window.WordoraBackend?.reviewProtocol||'unknown',
+   pendingOperations:sync?.pending??0,conflictedExams:sync?.conflicts??0,
+   lastSyncedAt:sync?.lastSyncedAt??null,lastSyncErrorCode:sync?.lastErrorCode??null,
    offline:window.WordoraOffline?.isOffline?.()||false,
    ...perfApi.metrics()
   };

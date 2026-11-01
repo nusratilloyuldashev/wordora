@@ -132,14 +132,16 @@ loadCore=async function(){
 OF.refreshData=async()=>{await loadCore();};
 const v7Render=render;
 let offlineInstallPrompt=null;
-let info={pending:0,ready:false};
+let info={pending:0,ready:false,conflicts:0,lastSyncedAt:null,lastErrorCode:null};
 function offlineIndicator(){
  if(!state.user)return '';
  const off=OF.isOffline();
+ const when=info.lastSyncedAt?new Date(info.lastSyncedAt).toLocaleString('uz-UZ',{dateStyle:'short',timeStyle:'short'}):'hali yo‘q';
  return `<div class="wordora-offline-banner ${off?'offline':info.ready?'ready':'online'}" role="status">
   <span>${off?'📴 Offline rejim':info.ready?'✅ Offline uchun tayyor':'📥 Offline ma’lumot yuklanmoqda'}</span>
-  <span>${window.WordoraBackend.reviewProtocol==='legacy-migration-required'?'⚠️ Natijalarni takror hisoblamaslik uchun Supabase upgrade_7_3.sql kerak':info.pending?`${info.pending} ta yuborilmagan natija`:'So‘zlar qurilmada saqlanadi'}</span>
-  <div class="wordora-offline-actions">${off?'':`<button data-offline="prepare">⬇️ Offline uchun yuklash</button>${info.pending?'<button data-offline="sync">🔄 Sinxronlash</button>':''}`}<button data-offline="install">📲 Telefonga o‘rnatish</button><button data-offline="help" aria-label="Offline yordam">ⓘ</button></div>
+  <span>${info.conflicts?`⚠️ ${info.conflicts} ta test konflikti — serverdagi yangi natija saqlandi`:window.WordoraBackend.reviewProtocol==='legacy-migration-required'?'⚠️ Supabase upgrade_7_3.sql kerak':info.lastErrorCode==='exam-sql-upgrade-required'?'⚠️ Supabase upgrade_7_4.sql kerak':info.pending?`${info.pending} ta yuborilmagan natija`:'So‘zlar qurilmada saqlanadi'}</span>
+  <span class="v74-sync-time" title="Oxirgi muvaffaqiyatli yuborilgan amal">🕒 Oxirgi sinxronlash: ${when}</span>
+  <div class="wordora-offline-actions">${off?'':`<button data-offline="prepare">⬇️ Offline uchun yuklash</button>${info.pending?'<button data-offline="sync">🔄 Sinxronlash</button>':''}${info.conflicts?'<button data-offline="resolve" class="v74-conflict-button">⚠️ Konfliktni hal qilish</button>':''}`}<button data-offline="install">📲 Telefonga o‘rnatish</button><button data-offline="help" aria-label="Offline yordam">ⓘ</button></div>
  </div>`;
 }
 render=function(){
@@ -153,9 +155,9 @@ async function refreshStatus(){
  if(statusBusy||!state.user)return;
  statusBusy=true;
  try{
-  const [pending,words,learning,prepared]=await Promise.all([OF.pending(),OF.read('words'),OF.read('learning'),OF.read('pwa-ready')]);
-  const next={pending:pending.length,ready:!!prepared?.prepared&&!!words?.words?.length&&Array.isArray(learning)};
-  if(next.pending!==info.pending||next.ready!==info.ready){info=next;render();}
+  const [status,words,learning,prepared]=await Promise.all([OF.syncStatus(),OF.read('words'),OF.read('learning'),OF.read('pwa-ready')]);
+  const next={...status,ready:!!prepared?.prepared&&!!words?.words?.length&&Array.isArray(learning)};
+  if(Object.keys(next).some(k=>next[k]!==info[k])){info=next;render();}
  }catch(e){console.warn('Wordora offline status:',e);}
  finally{statusBusy=false;}
 }
@@ -178,6 +180,18 @@ document.addEventListener('click',async e=>{
  if(action==='install'){
   if(offlineInstallPrompt){offlineInstallPrompt.prompt();await offlineInstallPrompt.userChoice;offlineInstallPrompt=null;}
   else toast('Android: Chrome → ⋮ → Bosh ekranga qo‘shish. iPhone: Safari → Share → Add to Home Screen.','success');
+  return;
+ }
+ if(action==='resolve'){
+  const accepted=window.confirm('Boshqa qurilmada saqlangan yangi natijani QOLDIRASIZMI? Eski offline test navbatdan olinadi va qurilmada arxivga saqlanadi. Buni faqat eski natijani yuborishni istamasangiz tasdiqlang.');
+  if(!accepted)return;
+  try{
+   const count=await OF.resolveConflicts();
+   window.WordoraV7?.invalidate('exam-conflict-resolved');
+   if(count){await loadCore({force:true});}
+   await refreshStatus();
+   toast(`${count} ta eski offline test arxivlandi. Serverdagi yangi natija saqlandi.`,'success');
+  }catch(err){toast('Konfliktni hal qilishda xato: '+err.message);}
   return;
  }
  if(action==='prepare'){
