@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-function session(){
+function session(testIndexedDB={}){
  let complete;
  const originalApi=()=>new Promise(resolve=>{complete=resolve;});
  const storage=new Map(),backend={api:originalApi,client:{auth:{getUser:async()=>({data:{user:{id:'a'}}})}}};
- const w={WordoraBackend:backend,crypto:{randomUUID:()=> '12345678-1234-4234-8234-123456789abc'},indexedDB:{}};
+ const w={WordoraBackend:backend,crypto:{randomUUID:()=> '12345678-1234-4234-8234-123456789abc'},indexedDB:testIndexedDB};
  const ctx={window:w,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
-  navigator:{onLine:true},document:{dispatchEvent(){}},CustomEvent:function(){},console,Date,Promise,setTimeout,clearTimeout,self:{crypto:w.crypto}};
+  navigator:{onLine:true},indexedDB:testIndexedDB,document:{dispatchEvent(){}},CustomEvent:function(){},console,Date,Promise,setTimeout,clearTimeout,self:{crypto:w.crypto}};
  vm.createContext(ctx);
  vm.runInContext(read('src/wordora-offline.js'),ctx);
  return {ctx,w,backend,get complete(){return complete;}};
@@ -69,4 +69,81 @@ test('7.7 release retains 90 percent mastery and CSP baseline',()=>{
  assert.match(headers,/base-uri 'self'/);
  assert.match(headers,/form-action 'self'/);
  assert.match(read('src/wordora-v7.js'),/version:'7\.7'/);
+});
+
+function fakeDB(stores) {
+ const db={
+  objectStoreNames:{contains:()=>true},
+  close(){},
+  transaction(names,mode){
+   const tx={
+    error:null,aborted:false,oncomplete:null,onabort:null,
+    abort(){this.aborted=true;queueMicrotask(()=>this.onabort?.());},
+    objectStore(name){
+     return {openCursor(){
+      const request={error:null};
+      const records=[...stores[name].entries()];
+      let index=0;
+      const next=()=>{
+       if(tx.aborted)return;
+       const entry=records[index];
+       request.result=entry?{
+        key:entry[0],value:entry[1],
+        delete(){stores[name].delete(entry[0]);},
+        continue(){index++;queueMicrotask(next);}
+       }:null;
+       request.onsuccess?.();
+       if(!entry&&name==='snapshots')queueMicrotask(()=>tx.oncomplete?.());
+      };
+      queueMicrotask(next);
+      return request;
+     }};
+    }
+   };
+   return tx;
+  }
+ };
+ return {open(){
+  const req={result:null};
+  queueMicrotask(()=>{req.result=db;req.onsuccess?.();});
+  return req;
+ }};
+}
+test('atomic privacy cleanup refuses deletion when current user has unsent work',async()=>{
+ const stores={outbox:new Map([['review-a',{id:'review-a',userId:'a'}]]),
+  snapshots:new Map([['a:words',{key:'a:words'}],['b:words',{key:'b:words'}]])};
+ const s=session(fakeDB(stores));
+ s.w.WordoraOffline.remember({id:'a',email:'a@example.com'});
+ await assert.rejects(s.w.WordoraOffline.clearOfflineCopies(),/Avval yuborilmagan/);
+ assert.equal(stores.snapshots.size,2);
+ assert.equal(stores.outbox.size,1);
+});
+test('atomic privacy cleanup removes only this user snapshots, not another account',async()=>{
+ const stores={outbox:new Map([['review-b',{id:'review-b',userId:'b'}]]),
+  snapshots:new Map([['a:words',{key:'a:words'}],['a:learning',{key:'a:learning'}],['b:words',{key:'b:words'}]])};
+ const s=session(fakeDB(stores));
+ s.w.WordoraOffline.remember({id:'a',email:'a@example.com'});
+ const result=await s.w.WordoraOffline.clearOfflineCopies();
+ assert.equal(result.cleared,2);
+ assert.equal(result.userId,'a');
+ assert.deepEqual([...stores.snapshots.keys()],['b:words']);
+ assert.equal(stores.outbox.size,1);
+});
+test('late word_learning response cannot repopulate another user in memory',async()=>{
+ const source=read('src/wordora-v4.js');
+ const code=source.slice(source.indexOf('async function v4Fetch(){'),source.indexOf('\nconst v4PreviousLoad='));
+ let resolve,changed=0;
+ const request=new Promise(r=>{resolve=r;});
+ const state={user:{id:'a'}};
+ const V4={activeAccount:'a',ready:false,lesson:null,memory:{}};
+ const client={from:()=>({select:()=>({eq:()=>({order:()=>({range:()=>request})})})})};
+ const ctx={state,V4,client,v4Set:()=>changed++};
+ vm.createContext(ctx);
+ vm.runInContext(code,ctx);
+ const job=ctx.v4Fetch();
+ state.user={id:'b'};
+ resolve({data:[{word_id:1,stage:'mastered'}],error:null});
+ await job;
+ assert.equal(changed,0);
+ assert.equal(V4.ready,false);
 });
