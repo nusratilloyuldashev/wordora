@@ -1,7 +1,7 @@
-name: Wordora 7.8 Unit usability regression and preview build
+name: Wordora 7.9 safety regression and preview build
 on:
   push:
-    branches: [main, 'feature/wordora-7-8']
+    branches: [main, 'feature/wordora-7-9']
     paths:
       - '.github/workflows/wordora-ui-75.yml'
       - 'src/**'
@@ -38,9 +38,10 @@ jobs:
           test -s supabase/security_audit_7_7.sql
           test -s dist/service-worker.js
           grep -q 'wordora-v76.js' dist/index.html
-          grep -q 'wordora-pwa-7.8.0' dist/service-worker.js
+          grep -q 'wordora-pwa-7.9.0' dist/service-worker.js
           grep -q 'X-Frame-Options: DENY' dist/_headers
           test -s dist/wordora-v78.js
           test -s dist/wordora-v78.css
           grep -q 'wordora-v78.js' dist/index.html
-          echo 'Wordora 7.8 assets verified.'
+          test -s scripts/release-gate.mjs
+          echo 'Wordora 7.9 assets verified.'

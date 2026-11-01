@@ -62,13 +62,13 @@ test('stale learning and Unit fetches are guarded before writing in-memory/cache
 });
 test('7.7 release retains 90 percent mastery and CSP baseline',()=>{
  const cfg=JSON.parse(read('package.json')),sw=read('src/service-worker.js'),v4=read('src/wordora-v4.js'),headers=read('src/_headers');
- assert.equal(cfg.version,'7.8.0');
- assert.match(sw,/wordora-pwa-7\.8\.0/);
+ assert.equal(cfg.version,'7.9.0');
+ assert.match(sw,/wordora-pwa-7\.9\.0/);
  assert.match(v4,/threshold: 90/);
  assert.match(headers,/object-src 'none'/);
  assert.match(headers,/base-uri 'self'/);
  assert.match(headers,/form-action 'self'/);
- assert.match(read('src/wordora-v7.js'),/version:'7\.8'/);
+ assert.match(read('src/wordora-v7.js'),/version:'7\.9'/);
 });
 
 function fakeDB(stores) {

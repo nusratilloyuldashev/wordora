@@ -1,12 +1,5 @@
 name: Wordora local Supabase Auth + REST 500 VU test
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/wordora-supabase-local-500.yml'
-      - 'scripts/wordora-local-supabase-500.mjs'
-      - 'supabase/upgrade_7_3.sql'
-      - 'supabase/upgrade_7_4.sql'
   workflow_dispatch:
 permissions:
   contents: read
@@ -63,7 +56,18 @@ jobs:
       - name: Run 100, 250 and 500 LOCAL Auth + REST user flows
         env:
           SUPABASE_LOCAL_STATUS_FILE: ${{ runner.temp }}/wordora-local-supabase.env
+          WORDORA_LOCAL_REPORT_FILE: ${{ runner.temp }}/wordora-local-load-report.json
         run: node scripts/wordora-local-supabase-500.mjs
+      - name: Evaluate local evidence gate
+        run: node scripts/release-gate.mjs "$RUNNER_TEMP/wordora-local-load-report.json"
+      - name: Upload local evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordora-7-9-local-report
+          path: ${{ runner.temp }}/wordora-local-load-report.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Stop and dispose local test stack
         if: always()
         run: supabase stop --no-backup > /dev/null 2>&1 || true

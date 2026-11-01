@@ -72,7 +72,7 @@ window.WordoraDiagnostics={
  async status(){
   const sync=await window.WordoraOffline?.syncStatus?.().catch(()=>null);
   return {
-   version:'7.8',reviewProtocol:window.WordoraBackend?.reviewProtocol||'unknown',
+   version:'7.9',reviewProtocol:window.WordoraBackend?.reviewProtocol||'unknown',
    pendingOperations:sync?.pending??0,conflictedExams:sync?.conflicts??0,
    lastSyncedAt:sync?.lastSyncedAt??null,lastSyncErrorCode:sync?.lastErrorCode??null,
    offline:window.WordoraOffline?.isOffline?.()||false,
